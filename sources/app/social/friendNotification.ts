@@ -1,4 +1,5 @@
-import { Prisma, RelationshipStatus } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import { RelationshipStatus, RelationshipStatusType } from "@/app/social/relationshipStatus";
 import { feedPost } from "@/app/feed/feedPost";
 import { Context } from "@/context";
 import { afterTx } from "@/storage/inTx";
@@ -13,7 +14,7 @@ import { afterTx } from "@/storage/inTx";
  */
 export function shouldSendNotification(
     lastNotifiedAt: Date | null,
-    status: RelationshipStatus
+    status: RelationshipStatusType
 ): boolean {
     // 被拒绝的关系不发送通知
     if (status === RelationshipStatus.rejected) {
@@ -51,7 +52,7 @@ export async function sendFriendRequestNotification(
 
     if (!receiverRelationship || !shouldSendNotification(
         receiverRelationship.lastNotifiedAt,
-        receiverRelationship.status
+        receiverRelationship.status as RelationshipStatusType
     )) {
         return;
     }
@@ -103,7 +104,7 @@ export async function sendFriendshipEstablishedNotification(
 
     if (user1Relationship && shouldSendNotification(
         user1Relationship.lastNotifiedAt,
-        user1Relationship.status
+        user1Relationship.status as RelationshipStatusType
     )) {
         const user1Ctx = Context.create(user1Id);
         await feedPost(
@@ -142,7 +143,7 @@ export async function sendFriendshipEstablishedNotification(
 
     if (user2Relationship && shouldSendNotification(
         user2Relationship.lastNotifiedAt,
-        user2Relationship.status
+        user2Relationship.status as RelationshipStatusType
     )) {
         const user2Ctx = Context.create(user2Id);
         await feedPost(

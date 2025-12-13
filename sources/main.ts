@@ -5,7 +5,7 @@ import { log } from "@/utils/log";
 // 导入优雅关闭工具
 import { awaitShutdown, onShutdown } from "@/utils/shutdown";
 // 导入数据库客户端
-import { db } from './storage/db';
+import { db, initSqliteOptimizations } from './storage/db';
 // 导入超时管理启动函数
 import { startTimeout } from "./app/presence/timeout";
 // 导入 Redis 客户端
@@ -34,6 +34,8 @@ async function main() {
     // ==================== 存储层初始化 ====================
     // 连接数据库
     await db.$connect();
+    // 初始化 SQLite 优化配置（WAL 模式、busy_timeout 等）
+    await initSqliteOptimizations();
     // 注册数据库关闭钩子
     onShutdown('db', async () => {
         await db.$disconnect();

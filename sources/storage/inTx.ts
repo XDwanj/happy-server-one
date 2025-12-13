@@ -32,8 +32,8 @@ export async function inTx<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
     }
     while (true) {
         try {
-            // 使用串行化隔离级别执行事务，避免并发冲突
-            let result = await db.$transaction(wrapped, { isolationLevel: 'Serializable', timeout: 10000 });
+            // 使用事务执行，SQLite 默认使用串行化模式
+            let result = await db.$transaction(wrapped, { timeout: 10000 });
             // 事务提交成功后，依次执行所有回调函数（用于发送事件等操作）
             for (let callback of result.callbacks) {
                 try {

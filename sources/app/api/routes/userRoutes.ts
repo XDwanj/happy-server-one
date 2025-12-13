@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Fastify } from "../types";
 import { db } from "@/storage/db";
-import { RelationshipStatus } from "@prisma/client";
+import { RelationshipStatus, RelationshipStatusType } from "@/app/social/relationshipStatus";
 import { friendAdd } from "@/app/social/friendAdd";
 import { Context } from "@/context";
 import { friendRemove } from "@/app/social/friendRemove";
@@ -51,7 +51,7 @@ export async function userRoutes(app: Fastify) {
                 toUserId: id
             }
         });
-        const status: RelationshipStatus = relationship?.status || RelationshipStatus.none;
+        const status: RelationshipStatusType = relationship?.status as RelationshipStatusType || RelationshipStatus.none;
 
         // Build user profile
         return reply.send({
@@ -76,11 +76,11 @@ export async function userRoutes(app: Fastify) {
         const { query } = request.query;
 
         // Search for users by username, first 10 matches
+        // SQLite 默认大小写不敏感，无需指定 mode
         const users = await db.account.findMany({
             where: {
                 username: {
-                    startsWith: query,
-                    mode: 'insensitive'
+                    startsWith: query
                 }
             },
             include: {
@@ -100,7 +100,7 @@ export async function userRoutes(app: Fastify) {
                     toUserId: user.id
                 }
             });
-            const status: RelationshipStatus = relationship?.status || RelationshipStatus.none;
+            const status: RelationshipStatusType = relationship?.status as RelationshipStatusType || RelationshipStatus.none;
             return buildUserProfile(user, status);
         }));
 

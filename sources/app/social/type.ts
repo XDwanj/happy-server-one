@@ -1,5 +1,5 @@
 import { getPublicUrl, ImageRef } from "@/storage/files";
-import { RelationshipStatus } from "@prisma/client";
+import { RelationshipStatus, RelationshipStatusType } from "@/app/social/relationshipStatus";
 import { GitHubProfile } from "../api/types";
 
 /**
@@ -31,7 +31,7 @@ export type UserProfile = {
     // 用户简介/个人描述，可选
     bio: string | null;
     // 用户之间的关系状态（如：朋友、阻止等）
-    status: RelationshipStatus;
+    status: RelationshipStatusType;
 }
 
 /**
@@ -59,7 +59,7 @@ export function buildUserProfile(
         githubUser: { profile: GitHubProfile } | null;
     },
     // 用户之间的关系状态（来自数据库）
-    status: RelationshipStatus
+    status: RelationshipStatusType
 ): UserProfile {
     // 从GitHub账户中提取GitHub资料（可能为undefined）
     const githubProfile = account.githubUser?.profile;

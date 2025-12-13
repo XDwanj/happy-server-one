@@ -1,7 +1,7 @@
 // 导入 Prisma 事务客户端类型，用于数据库事务操作
 import { Prisma } from "@prisma/client";
-// 导入用户关系状态枚举，定义好友、待处理、已阻止等关系类型
-import { RelationshipStatus } from "@prisma/client";
+// 导入用户关系状态常量，定义好友、待处理、已阻止等关系类型
+import { RelationshipStatus, RelationshipStatusType } from "@/app/social/relationshipStatus";
 
 /**
  * 设置用户之间的关系状态
@@ -12,10 +12,10 @@ import { RelationshipStatus } from "@prisma/client";
  * @param tx - Prisma 事务客户端，用于在数据库事务中执行操作
  * @param from - 发起用户的ID（关系的源用户）
  * @param to - 被关系用户的ID（关系的目标用户）
- * @param status - 关系状态，使用 RelationshipStatus 枚举值
+ * @param status - 关系状态，使用 RelationshipStatus 常量值
  * @param lastNotifiedAt - 可选参数，最后一次通知的时间戳。如果提供则更新该字段，否则保留现有值
  */
-export async function relationshipSet(tx: Prisma.TransactionClient, from: string, to: string, status: RelationshipStatus, lastNotifiedAt?: Date) {
+export async function relationshipSet(tx: Prisma.TransactionClient, from: string, to: string, status: RelationshipStatusType, lastNotifiedAt?: Date) {
     // 查询现有的关系记录，以便保留原有的 lastNotifiedAt 字段
     const existing = await tx.userRelationship.findUnique({
         where: {

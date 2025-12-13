@@ -11,7 +11,7 @@ generator json {
 }
 
 datasource db {
-    provider = "postgresql"
+    provider = "sqlite"
     url      = env("DATABASE_URL")
 }
 
@@ -110,7 +110,7 @@ model Session {
     accessKeys        AccessKey[]
 
     @@unique([accountId, tag])
-    @@index([accountId, updatedAt(sort: Desc)])
+    @@index([accountId, updatedAt])
 }
 
 model SessionMessage {
@@ -270,7 +270,7 @@ model Artifact {
     updatedAt         DateTime @updatedAt
 
     @@index([accountId])
-    @@index([accountId, updatedAt(sort: Desc)])
+    @@index([accountId, updatedAt])
 }
 
 //
@@ -300,22 +300,14 @@ model AccessKey {
 // Social Network - Relationships
 //
 
-enum RelationshipStatus {
-    none
-    requested
-    pending
-    friend
-    rejected
-}
-
 model UserRelationship {
     fromUserId     String
-    fromUser       Account            @relation("RelationshipsFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+    fromUser       Account  @relation("RelationshipsFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
     toUserId       String
-    toUser         Account            @relation("RelationshipsTo", fields: [toUserId], references: [id], onDelete: Cascade)
-    status         RelationshipStatus @default(pending)
-    createdAt      DateTime           @default(now())
-    updatedAt      DateTime           @updatedAt
+    toUser         Account  @relation("RelationshipsTo", fields: [toUserId], references: [id], onDelete: Cascade)
+    status         String   @default("pending")
+    createdAt      DateTime @default(now())
+    updatedAt      DateTime @updatedAt
     acceptedAt     DateTime?
     lastNotifiedAt DateTime?
 
@@ -341,7 +333,7 @@ model UserFeedItem {
 
     @@unique([userId, counter])
     @@unique([userId, repeatKey])
-    @@index([userId, counter(sort: Desc)])
+    @@index([userId, counter])
 }
 
 //

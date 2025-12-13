@@ -3,7 +3,7 @@ import { Context } from "@/context";
 // buildUserProfile: 用于将数据库用户记录转换为用户资料对象的构建函数
 import { buildUserProfile, UserProfile } from "./type";
 import { db } from "@/storage/db";
-import { RelationshipStatus } from "@prisma/client";
+import { RelationshipStatus, RelationshipStatusType } from "@/app/social/relationshipStatus";
 
 /**
  * 获取用户的好友列表
@@ -41,7 +41,7 @@ export async function friendList(ctx: Context): Promise<UserProfile[]> {
     // 保留关系状态信息，以便前端区分好友状态
     const profiles: UserProfile[] = [];
     for (const relationship of relationships) {
-        profiles.push(buildUserProfile(relationship.toUser, relationship.status));
+        profiles.push(buildUserProfile(relationship.toUser, relationship.status as RelationshipStatusType));
     }
 
     // 返回构建完成的用户资料列表

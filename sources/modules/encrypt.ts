@@ -1,3 +1,4 @@
+import { accountRoutes } from "@/app/api/routes/accountRoutes";
 import { KeyTree, crypto } from "privacy-kit";
 
 /** 密钥树实例，用于管理加密和解密操作 */
