@@ -33,25 +33,48 @@ yarn test sources/app/social/friendNotification.spec.ts
 ```
 /sources
 ├── /app                    # Application logic (domain-specific)
-│   ├── /api/routes        # Fastify API routes
-│   ├── /social            # Social features (friend system)
-│   ├── /feed              # User feed system
-│   ├── /presence          # Online presence & sessions
-│   └── /monitoring        # Metrics & health checks
-├── /modules               # Reusable abstractions (non-domain)
-│   ├── /ai                # AI service wrappers
-│   ├── /eventbus          # Cross-process event system
-│   ├── /lock              # Distributed locking
-│   └── /media             # Media processing
+│   ├── /api
+│   │   ├── /routes        # Fastify API routes
+│   │   ├── /socket        # Socket.IO event handlers
+│   │   └── socket.ts      # Socket.IO server config
+│   ├── /auth              # Authentication (privacy-kit tokens)
+│   ├── /events            # Event routing (eventRouter.ts)
+│   ├── /social            # Friend system
+│   ├── /feed              # User feed
+│   ├── /presence          # Session cache & timeout
+│   ├── /session           # Session CRUD
+│   ├── /kv                # Key-value storage
+│   └── /monitoring        # Prometheus metrics
+├── /modules               # Shared utilities
+│   ├── encrypt.ts         # Key tree management (privacy-kit)
+│   └── github.ts          # GitHub OAuth integration
 ├── /storage               # Data layer
 │   ├── db.ts              # Prisma client + SQLite optimizations
 │   ├── cache.ts           # In-memory cache with TTL (node-cache)
-│   └── inTx.ts            # Transaction wrapper with retry logic
+│   ├── inTx.ts            # Transaction wrapper with retry logic
+│   ├── simpleCache.ts     # Simple in-memory cache
+│   ├── files.ts           # Local file storage (data/files/)
+│   └── processImage.ts    # Image processing (requires FFmpeg)
 ├── /utils                 # Pure utilities
 └── main.ts                # Entry point
 ```
 
 ### Key Patterns
+
+**WebSocket (Socket.IO)**: Three connection scopes at `/v1/updates`:
+- `user-scoped`: Receives all user updates (mobile/web clients)
+- `session-scoped`: Receives only specific session updates
+- `machine-scoped`: Receives daemon/machine-specific updates
+
+Events split into two types:
+- **Update events**: Persistent, stored in DB (`new-session`, `new-message`, etc.)
+- **Ephemeral events**: Transient, not stored (`activity`, `usage`, `machine-status`)
+
+**Authentication**: Uses `privacy-kit` library for token management:
+- Persistent tokens: Never expire, cached in memory
+- GitHub OAuth tokens: 5-minute TTL
+- HTTP: Bearer token via `enableAuthentication` decorator
+- WebSocket: Token in handshake `auth` object
 
 **Transaction Handling**: Use `inTx()` for all database writes. It provides automatic retry on conflicts:
 ```typescript
@@ -92,6 +115,18 @@ import { inTx } from "@/storage/inTx";
 - **Never create migrations** - only run `yarn generate` for schema changes
 - Use `Json` type for complex fields
 - Enum types not supported - use string constants instead (see `relationshipStatus.ts`)
+
+SQLite optimizations applied at startup:
+```sql
+PRAGMA journal_mode = WAL       -- Better concurrency
+PRAGMA synchronous = NORMAL     -- Balance safety/performance
+PRAGMA busy_timeout = 5000      -- 5s lock wait
+```
+
+## Monitoring
+
+- Health check: `GET /health` (tests DB connection)
+- Prometheus metrics at `/metrics`: connections, events, HTTP latency, DB records
 
 ## Code Conventions
 
@@ -135,3 +170,4 @@ Key env vars in `.env.dev`:
 - `DATABASE_URL` - SQLite path (default: `file:./data/db.sqlite`)
 - `HANDY_MASTER_SECRET` - Encryption key
 - `PORT` - Server port (default: 3005)
+- `PUBLIC_URL` - Public URL prefix for file access (optional, defaults to `http://localhost:PORT`)
