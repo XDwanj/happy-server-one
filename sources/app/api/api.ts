@@ -1,6 +1,8 @@
 // API 服务器启动和配置模块
 // 负责初始化 Fastify 服务器、注册路由、启用中间件和 WebSocket 支持
 import fastify from "fastify";
+import fastifyStatic from "@fastify/static";
+import * as path from "path";
 import { log, logger } from "@/utils/log";
 import { serializerCompiler, validatorCompiler, ZodTypeProvider } from "fastify-type-provider-zod";
 import { onShutdown } from "@/utils/shutdown";
@@ -47,6 +49,13 @@ export async function startApi() {
         origin: '*',
         allowedHeaders: '*',
         methods: ['GET', 'POST', 'DELETE']
+    });
+
+    // 注册静态文件服务，用于提供本地存储的文件（如用户头像）
+    app.register(fastifyStatic, {
+        root: path.join(process.cwd(), 'data', 'files'),
+        prefix: '/files/',
+        decorateReply: false
     });
 
     // 根路由处理器，返回欢迎消息

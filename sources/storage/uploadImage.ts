@@ -1,6 +1,6 @@
 import { randomKey } from "@/utils/randomKey";
 import { processImage } from "./processImage";
-import { s3bucket, s3client, s3host } from "./files";
+import { writeFile } from "./files";
 import { db } from "./db";
 
 /**
@@ -37,8 +37,8 @@ export async function uploadImage(userId: string, directory: string, prefix: str
     const processed = await processImage(src);
     const key = randomKey(prefix);
     let filename = `${key}.${processed.format === 'png' ? 'png' : 'jpg'}`;
-    // 上传图像文件到 S3 存储
-    await s3client.putObject(s3bucket, 'public/users/' + userId + '/' + directory + '/' + filename, src);
+    // 上传图像文件到本地存储
+    await writeFile('public/users/' + userId + '/' + directory + '/' + filename, src);
     // 在数据库中创建图像记录以供后续复用
     await db.uploadedFile.create({
         data: {
@@ -56,14 +56,4 @@ export async function uploadImage(userId: string, directory: string, prefix: str
         width: processed.width,
         height: processed.height
     }
-}
-
-/**
- * 根据存储路径生成公开访问的 HTTPS URL
- *
- * @param path - 图像在存储中的相对路径（例如：public/users/{userId}/{directory}/{filename}）
- * @returns 返回完整的 HTTPS URL，可直接用于网络访问
- */
-export function resolveImageUrl(path: string) {
-    return `https://${s3host}/${s3bucket}/${path}`;
 }
