@@ -20,7 +20,6 @@ yarn dev            # Start with development env
 yarn test           # Run all tests
 yarn migrate        # Run Prisma migrations (uses .env.dev)
 yarn generate       # Generate Prisma client
-yarn redis          # Start local Redis
 ```
 
 Run a single test:
@@ -46,8 +45,8 @@ yarn test sources/app/social/friendNotification.spec.ts
 │   └── /media             # Media processing
 ├── /storage               # Data layer
 │   ├── db.ts              # Prisma client + SQLite optimizations
-│   ├── inTx.ts            # Transaction wrapper with retry logic
-│   └── redis.ts           # Redis client
+│   ├── cache.ts           # In-memory cache with TTL (node-cache)
+│   └── inTx.ts            # Transaction wrapper with retry logic
 ├── /utils                 # Pure utilities
 └── main.ts                # Entry point
 ```
@@ -130,7 +129,6 @@ tail -100 .logs/*.log | grep -E "(Token verified|User connected|User disconnecte
 
 Required:
 - Node.js 20
-- Redis (for event bus)
 - FFmpeg + Python3 (for media processing)
 
 Key env vars in `.env.dev`:

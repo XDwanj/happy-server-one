@@ -8,8 +8,6 @@ import { awaitShutdown, onShutdown } from "@/utils/shutdown";
 import { db, initSqliteOptimizations } from './storage/db';
 // 导入超时管理启动函数
 import { startTimeout } from "./app/presence/timeout";
-// 导入 Redis 客户端
-import { redis } from "./storage/redis";
 // 导入监控指标服务器启动函数
 import { startMetricsServer } from "@/app/monitoring/metrics";
 // 导入活动缓存
@@ -44,8 +42,6 @@ async function main() {
     onShutdown('activity-cache', async () => {
         activityCache.shutdown();
     });
-    // 测试 Redis 连接
-    await redis.ping();
 
     // ==================== 模块初始化 ====================
     // 初始化加密模块
