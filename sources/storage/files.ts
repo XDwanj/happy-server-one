@@ -29,10 +29,10 @@ export function getPublicUrl(filePath: string) {
  * @param filePath - 文件在存储目录中的相对路径
  * @param data - 文件二进制数据
  */
-export async function writeFile(filePath: string, data: Uint8Array): Promise<void> {
+export async function writeFile(filePath: string, data: Buffer | Uint8Array): Promise<void> {
     const fullPath = path.join(FILES_ROOT, filePath);
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
-    await fs.writeFile(fullPath, data);
+    await fs.writeFile(fullPath, data as Uint8Array);
 }
 
 /**
