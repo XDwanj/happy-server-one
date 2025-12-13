@@ -5,7 +5,20 @@ import { db } from "@/storage/db";
 import { auth } from "@/app/auth/auth";
 import { log } from "@/utils/log";
 
+/**
+ * 认证路由配置函数
+ * 注册所有与用户认证相关的API端点，包括：
+ * - 基于签名的认证
+ * - 终端设备认证请求与响应
+ * - 账户认证请求与响应
+ * @param app - Fastify 应用实例
+ */
 export function authRoutes(app: Fastify) {
+    /**
+     * POST /v1/auth - 主认证端点
+     * 验证用户的公钥签名，创建或更新用户账户，并返回认证令牌
+     * 请求体包含：publicKey（公钥）、challenge（挑战字符串）、signature（签名）
+     */
     app.post('/v1/auth', {
         schema: {
             body: z.object({
@@ -38,6 +51,12 @@ export function authRoutes(app: Fastify) {
         });
     });
 
+    /**
+     * POST /v1/auth/request - 终端设备认证请求端点
+     * 终端设备发起认证请求，服务器创建或更新认证请求记录
+     * 如果已经被授权，则直接返回令牌和响应数据
+     * 否则返回请求已创建的状态，等待用户在其他设备上批准
+     */
     app.post('/v1/auth/request', {
         schema: {
             body: z.object({
@@ -86,7 +105,11 @@ export function authRoutes(app: Fastify) {
         return reply.send({ state: 'requested' });
     });
 
-    // Get auth request status
+    /**
+     * GET /v1/auth/request/status - 获取认证请求状态端点
+     * 查询终端认证请求的当前状态
+     * 返回值：not_found（未找到）、pending（等待中）、authorized（已授权）
+     */
     app.get('/v1/auth/request/status', {
         schema: {
             querystring: z.object({
@@ -123,7 +146,12 @@ export function authRoutes(app: Fastify) {
         return reply.send({ status: 'pending', supportsV2: authRequest.supportsV2 });
     });
 
-    // Approve auth request
+    /**
+     * POST /v1/auth/response - 批准终端认证请求端点
+     * 需要用户认证（preHandler: app.authenticate）
+     * 已登录用户批准终端设备的认证请求
+     * 将响应数据和用户ID关联到对应的认证请求
+     */
     app.post('/v1/auth/response', {
         preHandler: app.authenticate,
         schema: {
@@ -165,7 +193,12 @@ export function authRoutes(app: Fastify) {
         return reply.send({ success: true });
     });
 
-    // Account auth request
+    /**
+     * POST /v1/auth/account/request - 账户认证请求端点
+     * 用于账户级别的认证请求（与终端认证不同）
+     * 创建或更新账户认证请求记录
+     * 如果已授权则直接返回令牌，否则返回请求已创建状态
+     */
     app.post('/v1/auth/account/request', {
         schema: {
             body: z.object({
@@ -210,7 +243,12 @@ export function authRoutes(app: Fastify) {
         return reply.send({ state: 'requested' });
     });
 
-    // Approve account auth request
+    /**
+     * POST /v1/auth/account/response - 批准账户认证请求端点
+     * 需要用户认证（preHandler: app.authenticate）
+     * 已登录用户批准账户级别的认证请求
+     * 将响应数据和用户ID关联到对应的账户认证请求
+     */
     app.post('/v1/auth/account/response', {
         preHandler: app.authenticate,
         schema: {

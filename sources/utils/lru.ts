@@ -1,3 +1,4 @@
+// 双向链表节点类，用于 LRU 集合的内部实现
 class Node<T> {
     constructor(
         public value: T,
@@ -6,12 +7,14 @@ class Node<T> {
     ) {}
 }
 
+// LRU（最近最少使用）集合实现，自动淘汰最久未使用的元素
 export class LRUSet<T> {
     private readonly maxSize: number;
     private readonly map: Map<T, Node<T>>;
     private head: Node<T> | null = null;
     private tail: Node<T> | null = null;
 
+    // 构造函数，初始化 LRU 集合，设置最大容量
     constructor(maxSize: number) {
         if (maxSize <= 0) {
             throw new Error('LRUSet maxSize must be greater than 0');
@@ -20,6 +23,7 @@ export class LRUSet<T> {
         this.map = new Map();
     }
 
+    // 将节点移动到链表头部，标记为最近使用
     private moveToFront(node: Node<T>): void {
         if (node === this.head) return;
 
@@ -36,6 +40,7 @@ export class LRUSet<T> {
         if (!this.tail) this.tail = node;
     }
 
+    // 添加元素到集合，如果已存在则更新其访问顺序，超出容量时淘汰最久未使用的元素
     add(value: T): void {
         const existingNode = this.map.get(value);
         
@@ -65,6 +70,7 @@ export class LRUSet<T> {
         }
     }
 
+    // 检查集合中是否存在指定元素，如果存在则更新其访问顺序
     has(value: T): boolean {
         const node = this.map.get(value);
         if (node) {
@@ -74,6 +80,7 @@ export class LRUSet<T> {
         return false;
     }
 
+    // 从集合中删除指定元素，返回是否删除成功
     delete(value: T): boolean {
         const node = this.map.get(value);
         if (!node) return false;
@@ -87,16 +94,19 @@ export class LRUSet<T> {
         return this.map.delete(value);
     }
 
+    // 清空集合中的所有元素
     clear(): void {
         this.map.clear();
         this.head = null;
         this.tail = null;
     }
 
+    // 获取集合中元素的数量
     get size(): number {
         return this.map.size;
     }
 
+    // 返回集合中所有元素的迭代器，按最近使用顺序排列
     *values(): IterableIterator<T> {
         let current = this.head;
         while (current) {
@@ -105,6 +115,7 @@ export class LRUSet<T> {
         }
     }
 
+    // 将集合转换为数组，按最近使用顺序排列
     toArray(): T[] {
         return Array.from(this.values());
     }

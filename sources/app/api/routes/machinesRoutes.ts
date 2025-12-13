@@ -7,7 +7,17 @@ import { randomKeyNaked } from "@/utils/randomKeyNaked";
 import { allocateUserSeq } from "@/storage/seq";
 import { buildNewMachineUpdate, buildUpdateMachineUpdate } from "@/app/events/eventRouter";
 
+/**
+ * 设备路由配置函数
+ * 定义所有与设备管理相关的 API 端点，包括创建、查询和获取设备信息
+ * @param app - Fastify 应用实例
+ */
 export function machinesRoutes(app: Fastify) {
+    /**
+     * POST /v1/machines - 创建或获取设备
+     * 如果设备已存在则返回现有设备信息，否则创建新设备
+     * 请求体包含设备 ID、加密的元数据、守护进程状态和数据加密密钥
+     */
     app.post('/v1/machines', {
         preHandler: app.authenticate,
         schema: {
@@ -108,6 +118,10 @@ export function machinesRoutes(app: Fastify) {
     });
 
 
+    /**
+     * GET /v1/machines - 获取所有设备列表
+     * 返回当前用户的所有设备，按最后活跃时间降序排列
+     */
     // Machines API
     app.get('/v1/machines', {
         preHandler: app.authenticate,
@@ -134,6 +148,10 @@ export function machinesRoutes(app: Fastify) {
         }));
     });
 
+    /**
+     * GET /v1/machines/:id - 根据 ID 获取单个设备
+     * 返回指定 ID 的设备详细信息，如果设备不存在则返回 404 错误
+     */
     // GET /v1/machines/:id - Get single machine by ID
     app.get('/v1/machines/:id', {
         preHandler: app.authenticate,

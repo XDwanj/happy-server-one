@@ -4,15 +4,20 @@ import { forever } from "@/utils/forever";
 import { shutdownSignal } from "@/utils/shutdown";
 import { buildMachineActivityEphemeral, buildSessionActivityEphemeral, eventRouter } from "@/app/events/eventRouter";
 
+/**
+ * 启动超时检测服务
+ * 定期检查并标记超过 10 分钟未活动的会话和机器为非活动状态
+ * 每分钟运行一次检查，并通过事件路由器发送状态更新通知
+ */
 export function startTimeout() {
     forever('session-timeout', async () => {
         while (true) {
-            // Find timed out sessions
+            // 查找超时的会话（超过 10 分钟未活动）
             const sessions = await db.session.findMany({
                 where: {
                     active: true,
                     lastActiveAt: {
-                        lte: new Date(Date.now() - 1000 * 60 * 10) // 10 minutes
+                        lte: new Date(Date.now() - 1000 * 60 * 10) // 10 分钟
                     }
                 }
             });
@@ -31,12 +36,12 @@ export function startTimeout() {
                 });
             }
 
-            // Find timed out machines
+            // 查找超时的机器（超过 10 分钟未活动）
             const machines = await db.machine.findMany({
                 where: {
                     active: true,
                     lastActiveAt: {
-                        lte: new Date(Date.now() - 1000 * 60 * 10) // 10 minutes
+                        lte: new Date(Date.now() - 1000 * 60 * 10) // 10 分钟
                     }
                 }
             });
@@ -55,7 +60,7 @@ export function startTimeout() {
                 });
             }
 
-            // Wait for 1 minute
+            // 等待 1 分钟后再次检查
             await delay(1000 * 60, shutdownSignal);
         }
     });

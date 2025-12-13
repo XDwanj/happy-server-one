@@ -9,9 +9,13 @@ import { githubDisconnect } from "@/app/github/githubDisconnect";
 import { Context } from "@/context";
 import { db } from "@/storage/db";
 
+/**
+ * 连接路由配置函数
+ * 负责注册所有第三方服务连接相关的路由，包括 GitHub OAuth、webhook 处理以及 AI 服务供应商的令牌管理
+ */
 export function connectRoutes(app: Fastify) {
 
-    // Add content type parser for webhook endpoints to preserve raw body
+    // 为 webhook 端点添加内容类型解析器，保留原始请求体用于签名验证
     app.addContentTypeParser(
         'application/json',
         { parseAs: 'string' },
@@ -44,7 +48,10 @@ export function connectRoutes(app: Fastify) {
         }
     );
 
-    // GitHub OAuth parameters
+    /**
+     * 获取 GitHub OAuth 授权参数
+     * 生成包含授权 URL 的响应，用户通过此 URL 进行 GitHub 身份验证
+     */
     app.get('/v1/connect/github/params', {
         preHandler: app.authenticate,
         schema: {
@@ -84,7 +91,10 @@ export function connectRoutes(app: Fastify) {
         return reply.send({ url });
     });
 
-    // GitHub OAuth callback (GET for redirect from GitHub)
+    /**
+     * GitHub OAuth 回调处理
+     * 处理 GitHub OAuth 授权后的回调请求，交换授权码获取访问令牌，并保存用户的 GitHub 账号信息
+     */
     app.get('/v1/connect/github/callback', {
         schema: {
             querystring: z.object({
@@ -164,7 +174,10 @@ export function connectRoutes(app: Fastify) {
         }
     });
 
-    // GitHub webhook handler with type safety
+    /**
+     * GitHub Webhook 处理器
+     * 接收并验证来自 GitHub 的 webhook 事件，确保请求签名有效后处理相应的事件
+     */
     app.post('/v1/connect/github/webhook', {
         schema: {
             headers: z.object({
@@ -214,7 +227,10 @@ export function connectRoutes(app: Fastify) {
         }
     });
 
-    // GitHub disconnect endpoint
+    /**
+     * GitHub 账号断开连接
+     * 解除当前用户与 GitHub 账号的关联，删除访问令牌和相关数据
+     */
     app.delete('/v1/connect/github', {
         preHandler: app.authenticate,
         schema: {
@@ -241,10 +257,10 @@ export function connectRoutes(app: Fastify) {
         }
     });
 
-    //
-    // Inference endpoints
-    //
-
+    /**
+     * AI 服务供应商令牌注册
+     * 保存或更新用户的 AI 服务供应商（OpenAI、Anthropic、Gemini）访问令牌，令牌会被加密存储
+     */
     app.post('/v1/connect/:vendor/register', {
         preHandler: app.authenticate,
         schema: {
@@ -266,6 +282,10 @@ export function connectRoutes(app: Fastify) {
         reply.send({ success: true });
     });
 
+    /**
+     * 获取 AI 服务供应商令牌
+     * 查询并解密用户指定的 AI 服务供应商的访问令牌，如果不存在则返回 null
+     */
     app.get('/v1/connect/:vendor/token', {
         preHandler: app.authenticate,
         schema: {
@@ -291,6 +311,10 @@ export function connectRoutes(app: Fastify) {
         }
     });
 
+    /**
+     * 删除 AI 服务供应商令牌
+     * 从数据库中删除用户指定的 AI 服务供应商的访问令牌
+     */
     app.delete('/v1/connect/:vendor', {
         preHandler: app.authenticate,
         schema: {
@@ -309,6 +333,10 @@ export function connectRoutes(app: Fastify) {
         reply.send({ success: true });
     });
 
+    /**
+     * 获取所有 AI 服务供应商令牌
+     * 查询并解密当前用户所有已注册的 AI 服务供应商令牌
+     */
     app.get('/v1/connect/tokens', {
         preHandler: app.authenticate,
         schema: {

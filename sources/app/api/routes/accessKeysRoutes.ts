@@ -3,8 +3,13 @@ import { z } from "zod";
 import { db } from "@/storage/db";
 import { log } from "@/utils/log";
 
+/**
+ * 访问密钥路由
+ * 注册所有与访问密钥相关的 API 端点,包括获取、创建和更新访问密钥
+ * @param app - Fastify 应用实例
+ */
 export function accessKeysRoutes(app: Fastify) {
-    // Get Access Key API
+    // 获取访问密钥 API
     app.get('/v1/access-keys/:sessionId/:machineId', {
         preHandler: app.authenticate,
         schema: {
@@ -34,7 +39,7 @@ export function accessKeysRoutes(app: Fastify) {
         const { sessionId, machineId } = request.params;
 
         try {
-            // Verify session and machine belong to user
+            // 验证会话和机器是否属于当前用户
             const [session, machine] = await Promise.all([
                 db.session.findFirst({
                     where: { id: sessionId, accountId: userId }
@@ -48,7 +53,7 @@ export function accessKeysRoutes(app: Fastify) {
                 return reply.code(404).send({ error: 'Session or machine not found' });
             }
 
-            // Get access key
+            // 获取访问密钥
             const accessKey = await db.accessKey.findUnique({
                 where: {
                     accountId_machineId_sessionId: {
@@ -77,7 +82,7 @@ export function accessKeysRoutes(app: Fastify) {
         }
     });
 
-    // Create Access Key API
+    // 创建访问密钥 API
     app.post('/v1/access-keys/:sessionId/:machineId', {
         preHandler: app.authenticate,
         schema: {
@@ -116,7 +121,7 @@ export function accessKeysRoutes(app: Fastify) {
         const { data } = request.body;
 
         try {
-            // Verify session and machine belong to user
+            // 验证会话和机器是否属于当前用户
             const [session, machine] = await Promise.all([
                 db.session.findFirst({
                     where: { id: sessionId, accountId: userId }
@@ -130,7 +135,7 @@ export function accessKeysRoutes(app: Fastify) {
                 return reply.code(404).send({ error: 'Session or machine not found' });
             }
 
-            // Check if access key already exists
+            // 检查访问密钥是否已存在
             const existing = await db.accessKey.findUnique({
                 where: {
                     accountId_machineId_sessionId: {
@@ -145,7 +150,7 @@ export function accessKeysRoutes(app: Fastify) {
                 return reply.code(409).send({ error: 'Access key already exists' });
             }
 
-            // Create access key
+            // 创建访问密钥
             const accessKey = await db.accessKey.create({
                 data: {
                     accountId: userId,
@@ -173,7 +178,7 @@ export function accessKeysRoutes(app: Fastify) {
         }
     });
 
-    // Update Access Key API
+    // 更新访问密钥 API (使用乐观锁版本控制)
     app.put('/v1/access-keys/:sessionId/:machineId', {
         preHandler: app.authenticate,
         schema: {
@@ -213,7 +218,7 @@ export function accessKeysRoutes(app: Fastify) {
         const { data, expectedVersion } = request.body;
 
         try {
-            // Get current access key for version check
+            // 获取当前访问密钥以进行版本检查
             const currentAccessKey = await db.accessKey.findUnique({
                 where: {
                     accountId_machineId_sessionId: {
@@ -228,7 +233,7 @@ export function accessKeysRoutes(app: Fastify) {
                 return reply.code(404).send({ error: 'Access key not found' });
             }
 
-            // Check version
+            // 检查版本是否匹配
             if (currentAccessKey.dataVersion !== expectedVersion) {
                 return reply.code(200).send({
                     success: false,
@@ -238,7 +243,7 @@ export function accessKeysRoutes(app: Fastify) {
                 });
             }
 
-            // Update with version check
+            // 使用版本检查进行更新
             const { count } = await db.accessKey.updateMany({
                 where: {
                     accountId: userId,
@@ -254,7 +259,7 @@ export function accessKeysRoutes(app: Fastify) {
             });
 
             if (count === 0) {
-                // Re-fetch to get current version
+                // 重新获取以获得当前版本
                 const accessKey = await db.accessKey.findUnique({
                     where: {
                         accountId_machineId_sessionId: {

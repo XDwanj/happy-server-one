@@ -10,18 +10,18 @@ import { randomKeyNaked } from "@/utils/randomKeyNaked";
 import { githubDisconnect } from "./githubDisconnect";
 
 /**
- * Connects a GitHub account to a user profile.
- * 
- * Flow:
- * 1. Check if already connected to same account - early exit if yes
- * 2. If GitHub account is connected to another user - disconnect it first
- * 3. Upload avatar to S3 (non-transactional operation)
- * 4. In transaction: persist GitHub account and link to user with GitHub username
- * 5. Send socket update after transaction completes
- * 
- * @param ctx - Request context containing user ID
- * @param githubProfile - GitHub profile data from OAuth
- * @param accessToken - GitHub access token for API access
+ * 将 GitHub 账号连接到用户配置文件
+ *
+ * 执行流程：
+ * 1. 检查用户是否已连接相同的 GitHub 账号 - 如果是则直接返回
+ * 2. 如果该 GitHub 账号已连接到其他用户 - 先断开连接
+ * 3. 上传头像到 S3（非事务操作）
+ * 4. 在事务中：持久化 GitHub 账号并使用 GitHub 用户名关联到用户
+ * 5. 事务完成后发送 socket 更新
+ *
+ * @param ctx - 包含用户 ID 的请求上下文
+ * @param githubProfile - 从 OAuth 获取的 GitHub 配置数据
+ * @param accessToken - GitHub 访问令牌，用于 API 访问
  */
 export async function githubConnect(
     ctx: Context,

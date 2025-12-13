@@ -1,7 +1,9 @@
+// 异步锁类，用于在异步操作中实现互斥访问
 export class AsyncLock {
     private permits: number = 1;
     private promiseResolverQueue: Array<(v: boolean) => void> = [];
 
+    // 在锁保护下执行函数，确保函数执行期间独占访问资源
     async inLock<T>(func: () => Promise<T> | T): Promise<T> {
         try {
             await this.lock();
@@ -11,6 +13,7 @@ export class AsyncLock {
         }
     }
 
+    // 获取锁，如果锁不可用则等待
     private async lock() {
         if (this.permits > 0) {
             this.permits = this.permits - 1;
@@ -19,6 +22,7 @@ export class AsyncLock {
         await new Promise<boolean>(resolve => this.promiseResolverQueue.push(resolve));
     }
 
+    // 释放锁，如果有等待者则唤醒下一个等待者
     private unlock() {
         this.permits += 1;
         if (this.permits > 1 && this.promiseResolverQueue.length > 0) {

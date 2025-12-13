@@ -6,6 +6,7 @@ import { getPublicUrl } from "@/storage/files";
 
 // === CONNECTION TYPES ===
 
+// 会话范围的连接 - 仅接收与特定会话相关的更新
 export interface SessionScopedConnection {
     connectionType: 'session-scoped';
     socket: Socket;
@@ -13,12 +14,14 @@ export interface SessionScopedConnection {
     sessionId: string;
 }
 
+// 用户范围的连接 - 接收用户的所有更新(移动端/Web端)
 export interface UserScopedConnection {
     connectionType: 'user-scoped';
     socket: Socket;
     userId: string;
 }
 
+// 机器范围的连接 - 仅接收与特定机器相关的更新
 export interface MachineScopedConnection {
     connectionType: 'machine-scoped';
     socket: Socket;
@@ -26,18 +29,21 @@ export interface MachineScopedConnection {
     machineId: string;
 }
 
+// 客户端连接类型 - 包含所有可能的连接类型
 export type ClientConnection = SessionScopedConnection | UserScopedConnection | MachineScopedConnection;
 
 // === RECIPIENT FILTER TYPES ===
 
+// 接收者过滤器 - 用于控制事件发送的目标连接
 export type RecipientFilter =
-    | { type: 'all-interested-in-session'; sessionId: string }
-    | { type: 'user-scoped-only' }
-    | { type: 'machine-scoped-only'; machineId: string }  // For update-machine: sends to user-scoped + only the specific machine
-    | { type: 'all-user-authenticated-connections' };
+    | { type: 'all-interested-in-session'; sessionId: string }  // 发送给对特定会话感兴趣的所有连接
+    | { type: 'user-scoped-only' }  // 仅发送给用户范围的连接
+    | { type: 'machine-scoped-only'; machineId: string }  // 发送给用户范围连接 + 特定机器连接
+    | { type: 'all-user-authenticated-connections' };  // 发送给用户的所有已认证连接
 
 // === UPDATE EVENT TYPES (Persistent) ===
 
+// 更新事件类型 - 持久化的事件,需要存储和同步
 export type UpdateEvent = {
     type: 'new-message';
     sessionId: string;
@@ -156,6 +162,7 @@ export type UpdateEvent = {
 
 // === EPHEMERAL EVENT TYPES (Transient) ===
 
+// 临时事件类型 - 瞬时事件,不需要持久化
 export type EphemeralEvent = {
     type: 'activity';
     id: string;
@@ -183,6 +190,7 @@ export type EphemeralEvent = {
 
 // === EVENT PAYLOAD TYPES ===
 
+// 更新事件负载 - 持久化事件的传输格式
 export interface UpdatePayload {
     id: string;
     seq: number;
@@ -193,6 +201,7 @@ export interface UpdatePayload {
     createdAt: number;
 }
 
+// 临时事件负载 - 瞬时事件的传输格式
 export interface EphemeralPayload {
     type: EphemeralEvent['type'];
     [key: string]: any;
@@ -200,11 +209,13 @@ export interface EphemeralPayload {
 
 // === EVENT ROUTER CLASS ===
 
+// 事件路由器 - 管理 WebSocket 连接和事件分发
 class EventRouter {
     private userConnections = new Map<string, Set<ClientConnection>>();
 
     // === CONNECTION MANAGEMENT ===
 
+    // 添加连接 - 将客户端连接添加到用户的连接集合中
     addConnection(userId: string, connection: ClientConnection): void {
         if (!this.userConnections.has(userId)) {
             this.userConnections.set(userId, new Set());
@@ -212,6 +223,7 @@ class EventRouter {
         this.userConnections.get(userId)!.add(connection);
     }
 
+    // 移除连接 - 从用户的连接集合中移除指定的客户端连接
     removeConnection(userId: string, connection: ClientConnection): void {
         const connections = this.userConnections.get(userId);
         if (connections) {
@@ -222,12 +234,14 @@ class EventRouter {
         }
     }
 
+    // 获取连接 - 返回指定用户的所有连接
     getConnections(userId: string): Set<ClientConnection> | undefined {
         return this.userConnections.get(userId);
     }
 
     // === EVENT EMISSION METHODS ===
 
+    // 发送更新事件 - 向符合条件的连接发送持久化事件
     emitUpdate(params: {
         userId: string;
         payload: UpdatePayload;
@@ -243,6 +257,7 @@ class EventRouter {
         });
     }
 
+    // 发送临时事件 - 向符合条件的连接发送瞬时事件
     emitEphemeral(params: {
         userId: string;
         payload: EphemeralPayload;
@@ -260,6 +275,7 @@ class EventRouter {
 
     // === PRIVATE ROUTING LOGIC ===
 
+    // 判断是否应向连接发送 - 根据过滤器判断连接是否应接收事件
     private shouldSendToConnection(
         connection: ClientConnection,
         filter: RecipientFilter
@@ -299,6 +315,7 @@ class EventRouter {
         }
     }
 
+    // 发送事件 - 内部方法,实际执行事件发送逻辑
     private emit(params: {
         userId: string;
         eventName: 'update' | 'ephemeral';
@@ -328,10 +345,12 @@ class EventRouter {
     }
 }
 
+// 事件路由器单例 - 全局唯一的事件路由器实例
 export const eventRouter = new EventRouter();
 
 // === EVENT BUILDER FUNCTIONS ===
 
+// 构建新会话更新事件 - 创建会话创建事件的负载
 export function buildNewSessionUpdate(session: {
     id: string;
     seq: number;
@@ -366,6 +385,7 @@ export function buildNewSessionUpdate(session: {
     };
 }
 
+// 构建新消息更新事件 - 创建消息创建事件的负载
 export function buildNewMessageUpdate(message: {
     id: string;
     seq: number;
@@ -393,6 +413,7 @@ export function buildNewMessageUpdate(message: {
     };
 }
 
+// 构建会话更新事件 - 创建会话元数据或代理状态更新事件的负载
 export function buildUpdateSessionUpdate(sessionId: string, updateSeq: number, updateId: string, metadata?: { value: string; version: number }, agentState?: { value: string; version: number }): UpdatePayload {
     return {
         id: updateId,
@@ -407,6 +428,7 @@ export function buildUpdateSessionUpdate(sessionId: string, updateSeq: number, u
     };
 }
 
+// 构建会话删除事件 - 创建会话删除事件的负载
 export function buildDeleteSessionUpdate(sessionId: string, updateSeq: number, updateId: string): UpdatePayload {
     return {
         id: updateId,
@@ -419,6 +441,7 @@ export function buildDeleteSessionUpdate(sessionId: string, updateSeq: number, u
     };
 }
 
+// 构建账户更新事件 - 创建账户信息更新事件的负载
 export function buildUpdateAccountUpdate(userId: string, profile: Partial<AccountProfile>, updateSeq: number, updateId: string): UpdatePayload {
     return {
         id: updateId,
@@ -433,6 +456,7 @@ export function buildUpdateAccountUpdate(userId: string, profile: Partial<Accoun
     };
 }
 
+// 构建新机器更新事件 - 创建机器注册事件的负载
 export function buildNewMachineUpdate(machine: {
     id: string;
     seq: number;
@@ -467,6 +491,7 @@ export function buildNewMachineUpdate(machine: {
     };
 }
 
+// 构建机器更新事件 - 创建机器元数据或守护进程状态更新事件的负载
 export function buildUpdateMachineUpdate(machineId: string, updateSeq: number, updateId: string, metadata?: { value: string; version: number }, daemonState?: { value: string; version: number }): UpdatePayload {
     return {
         id: updateId,
@@ -481,6 +506,7 @@ export function buildUpdateMachineUpdate(machineId: string, updateSeq: number, u
     };
 }
 
+// 构建会话活动临时事件 - 创建会话活动状态的瞬时事件负载
 export function buildSessionActivityEphemeral(sessionId: string, active: boolean, activeAt: number, thinking?: boolean): EphemeralPayload {
     return {
         type: 'activity',
@@ -491,6 +517,7 @@ export function buildSessionActivityEphemeral(sessionId: string, active: boolean
     };
 }
 
+// 构建机器活动临时事件 - 创建机器活动状态的瞬时事件负载
 export function buildMachineActivityEphemeral(machineId: string, active: boolean, activeAt: number): EphemeralPayload {
     return {
         type: 'machine-activity',
@@ -500,6 +527,7 @@ export function buildMachineActivityEphemeral(machineId: string, active: boolean
     };
 }
 
+// 构建使用量临时事件 - 创建资源使用量统计的瞬时事件负载
 export function buildUsageEphemeral(sessionId: string, key: string, tokens: Record<string, number>, cost: Record<string, number>): EphemeralPayload {
     return {
         type: 'usage',
@@ -511,6 +539,7 @@ export function buildUsageEphemeral(sessionId: string, key: string, tokens: Reco
     };
 }
 
+// 构建机器状态临时事件 - 创建机器在线状态的瞬时事件负载
 export function buildMachineStatusEphemeral(machineId: string, online: boolean): EphemeralPayload {
     return {
         type: 'machine-status',
@@ -520,6 +549,7 @@ export function buildMachineStatusEphemeral(machineId: string, online: boolean):
     };
 }
 
+// 构建新工件更新事件 - 创建工件创建事件的负载
 export function buildNewArtifactUpdate(artifact: {
     id: string;
     seq: number;
@@ -550,6 +580,7 @@ export function buildNewArtifactUpdate(artifact: {
     };
 }
 
+// 构建工件更新事件 - 创建工件头部或主体更新事件的负载
 export function buildUpdateArtifactUpdate(artifactId: string, updateSeq: number, updateId: string, header?: { value: string; version: number }, body?: { value: string; version: number }): UpdatePayload {
     return {
         id: updateId,
@@ -564,6 +595,7 @@ export function buildUpdateArtifactUpdate(artifactId: string, updateSeq: number,
     };
 }
 
+// 构建工件删除事件 - 创建工件删除事件的负载
 export function buildDeleteArtifactUpdate(artifactId: string, updateSeq: number, updateId: string): UpdatePayload {
     return {
         id: updateId,
@@ -576,6 +608,7 @@ export function buildDeleteArtifactUpdate(artifactId: string, updateSeq: number,
     };
 }
 
+// 构建关系更新事件 - 创建用户关系状态更新事件的负载
 export function buildRelationshipUpdatedEvent(
     data: {
         uid: string;
@@ -596,6 +629,7 @@ export function buildRelationshipUpdatedEvent(
     };
 }
 
+// 构建新动态更新事件 - 创建动态发布事件的负载
 export function buildNewFeedPostUpdate(feedItem: {
     id: string;
     body: any;
@@ -616,6 +650,7 @@ export function buildNewFeedPostUpdate(feedItem: {
     };
 }
 
+// 构建键值对批量更新事件 - 创建键值存储批量更新事件的负载
 export function buildKVBatchUpdateUpdate(
     changes: Array<{ key: string; value: string | null; version: number }>,
     updateSeq: number,

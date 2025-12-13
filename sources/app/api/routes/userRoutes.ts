@@ -8,6 +8,7 @@ import { friendRemove } from "@/app/social/friendRemove";
 import { friendList } from "@/app/social/friendList";
 import { buildUserProfile } from "@/app/social/type";
 
+// 用户相关的路由配置函数，包括用户资料查询、搜索和好友管理功能
 export async function userRoutes(app: Fastify) {
 
     // Get user profile
@@ -164,20 +165,22 @@ export async function userRoutes(app: Fastify) {
     });
 };
 
-// Shared Zod Schemas
+// 共享的 Zod Schema 定义
+// 用户关系状态枚举Schema：none-无关系、requested-已发送请求、pending-待处理、friend-好友、rejected-已拒绝
 const RelationshipStatusSchema = z.enum(['none', 'requested', 'pending', 'friend', 'rejected']);
+// 用户资料Schema定义，包含用户的基本信息、头像、用户名、简介和关系状态
 const UserProfileSchema = z.object({
-    id: z.string(),
-    firstName: z.string(),
-    lastName: z.string().nullable(),
-    avatar: z.object({
-        path: z.string(),
-        url: z.string(),
-        width: z.number().optional(),
-        height: z.number().optional(),
-        thumbhash: z.string().optional()
+    id: z.string(),                    // 用户唯一标识
+    firstName: z.string(),             // 名字
+    lastName: z.string().nullable(),   // 姓氏（可选）
+    avatar: z.object({                 // 头像信息（可选）
+        path: z.string(),              // 存储路径
+        url: z.string(),               // 访问URL
+        width: z.number().optional(),  // 宽度
+        height: z.number().optional(), // 高度
+        thumbhash: z.string().optional() // 缩略图哈希
     }).nullable(),
-    username: z.string(),
-    bio: z.string().nullable(),
-    status: RelationshipStatusSchema
+    username: z.string(),              // 用户名
+    bio: z.string().nullable(),        // 个人简介（可选）
+    status: RelationshipStatusSchema   // 与当前用户的关系状态
 });

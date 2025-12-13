@@ -3,6 +3,12 @@ import { db } from "@/storage/db";
 import { log } from "@/utils/log";
 import { eventRouter } from "@/app/events/eventRouter";
 
+/**
+ * 访问密钥处理器
+ * 处理通过 WebSocket 获取访问密钥的请求
+ * @param userId - 用户ID
+ * @param socket - Socket.io 客户端连接实例
+ */
 export function accessKeyHandler(userId: string, socket: Socket) {
     // Get access key via socket
     socket.on('access-key-get', async (data: { sessionId: string; machineId: string }, callback: (response: any) => void) => {

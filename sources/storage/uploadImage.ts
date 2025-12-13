@@ -3,15 +3,27 @@ import { processImage } from "./processImage";
 import { s3bucket, s3client, s3host } from "./files";
 import { db } from "./db";
 
+/**
+ * 上传和处理图像文件
+ * 该函数处理用户图像的上传流程，包括重复检查、图像处理、存储和元数据记录
+ *
+ * @param userId - 用户 ID，用于组织存储路径
+ * @param directory - 图像存储目录
+ * @param prefix - 生成随机文件名时的前缀
+ * @param url - 原始图像 URL，用于检查重复
+ * @param src - 图像二进制数据缓冲区
+ * @returns 返回包含图像路径、缩略图哈希值和尺寸信息的对象
+ */
 export async function uploadImage(userId: string, directory: string, prefix: string, url: string, src: Buffer) {
 
-    // Check if image already exists
+    // 检查图像是否已存在
     const existing = await db.uploadedFile.findFirst({
         where: {
             reuseKey: 'image-url:' + url
         }
     });
 
+    // 如果存在且包含必要的元数据，直接返回现有记录
     if (existing && existing.thumbhash && existing.width && existing.height) {
         return {
             path: existing.path,
@@ -21,11 +33,13 @@ export async function uploadImage(userId: string, directory: string, prefix: str
         };
     }
 
-    // Process image
+    // 处理图像：转换格式、提取元数据和生成缩略图哈希
     const processed = await processImage(src);
     const key = randomKey(prefix);
     let filename = `${key}.${processed.format === 'png' ? 'png' : 'jpg'}`;
+    // 上传图像文件到 S3 存储
     await s3client.putObject(s3bucket, 'public/users/' + userId + '/' + directory + '/' + filename, src);
+    // 在数据库中创建图像记录以供后续复用
     await db.uploadedFile.create({
         data: {
             accountId: userId,
@@ -44,6 +58,12 @@ export async function uploadImage(userId: string, directory: string, prefix: str
     }
 }
 
+/**
+ * 根据存储路径生成公开访问的 HTTPS URL
+ *
+ * @param path - 图像在存储中的相对路径（例如：public/users/{userId}/{directory}/{filename}）
+ * @returns 返回完整的 HTTPS URL，可直接用于网络访问
+ */
 export function resolveImageUrl(path: string) {
     return `https://${s3host}/${s3bucket}/${path}`;
 }

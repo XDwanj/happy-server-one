@@ -1,6 +1,11 @@
 import { log } from "@/utils/log";
 import { Fastify } from "../types";
 
+/**
+ * 启用错误处理器
+ * 为 Fastify 应用配置全局错误处理、404处理、错误钩子和响应序列化错误捕获
+ * @param app - Fastify 应用实例
+ */
 export function enableErrorHandlers(app: Fastify) {
     // Global error handler
     app.setErrorHandler(async (error, request, reply) => {

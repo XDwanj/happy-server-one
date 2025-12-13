@@ -8,9 +8,16 @@ import { randomKeyNaked } from "@/utils/randomKeyNaked";
 import { allocateUserSeq } from "@/storage/seq";
 import { sessionDelete } from "@/app/session/sessionDelete";
 
+/**
+ * 注册所有会话相关的 API 路由
+ * 包括会话列表查询、创建、消息获取和删除等功能
+ */
 export function sessionRoutes(app: Fastify) {
 
-    // Sessions API
+    /**
+     * GET /v1/sessions - 获取用户的所有会话列表（V1版本）
+     * 按更新时间降序排列，最多返回150个会话
+     */
     app.get('/v1/sessions', {
         preHandler: app.authenticate,
     }, async (request, reply) => {
@@ -70,7 +77,11 @@ export function sessionRoutes(app: Fastify) {
         });
     });
 
-    // V2 Sessions API - Active sessions only
+    /**
+     * GET /v2/sessions/active - 获取用户的活跃会话列表（V2版本）
+     * 只返回最近15分钟内活跃的会话
+     * 支持通过 limit 参数控制返回数量（默认150，最大500）
+     */
     app.get('/v2/sessions/active', {
         preHandler: app.authenticate,
         schema: {
@@ -122,7 +133,15 @@ export function sessionRoutes(app: Fastify) {
         });
     });
 
-    // V2 Sessions API - Cursor-based pagination with change tracking
+    /**
+     * GET /v2/sessions - 获取用户的会话列表（V2版本，支持游标分页）
+     * 支持基于游标的分页和变更追踪
+     *
+     * 查询参数:
+     * - cursor: 分页游标（可选）
+     * - limit: 每页数量（默认50，最大200）
+     * - changedSince: 只返回指定时间戳之后更新的会话（可选）
+     */
     app.get('/v2/sessions', {
         preHandler: app.authenticate,
         schema: {
@@ -215,7 +234,17 @@ export function sessionRoutes(app: Fastify) {
         });
     });
 
-    // Create or load session by tag
+    /**
+     * POST /v1/sessions - 创建或加载会话（根据标签）
+     * 如果具有相同标签的会话已存在，则返回现有会话
+     * 否则创建新会话并通过事件总线通知所有用户连接
+     *
+     * 请求体:
+     * - tag: 会话标签（用于标识和去重）
+     * - metadata: 会话元数据
+     * - agentState: 代理状态（可选）
+     * - dataEncryptionKey: 数据加密密钥（可选，Base64编码）
+     */
     app.post('/v1/sessions', {
         schema: {
             body: z.object({
@@ -305,6 +334,14 @@ export function sessionRoutes(app: Fastify) {
         }
     });
 
+    /**
+     * GET /v1/sessions/:sessionId/messages - 获取指定会话的消息列表
+     * 验证会话属于当前用户后，返回该会话的所有消息
+     * 按创建时间降序排列，最多返回150条消息
+     *
+     * 路径参数:
+     * - sessionId: 会话ID
+     */
     app.get('/v1/sessions/:sessionId/messages', {
         schema: {
             params: z.object({
@@ -354,7 +391,17 @@ export function sessionRoutes(app: Fastify) {
         });
     });
 
-    // Delete session
+    /**
+     * DELETE /v1/sessions/:sessionId - 删除指定的会话
+     * 验证会话属于当前用户后执行删除操作
+     *
+     * 路径参数:
+     * - sessionId: 要删除的会话ID
+     *
+     * 返回:
+     * - success: true 表示删除成功
+     * - 404 错误表示会话不存在或不属于当前用户
+     */
     app.delete('/v1/sessions/:sessionId', {
         schema: {
             params: z.object({

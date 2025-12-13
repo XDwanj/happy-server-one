@@ -1,16 +1,34 @@
+// 导入监控指标计数器
 import { machineAliveEventsCounter, websocketEventsCounter } from "@/app/monitoring/metrics2";
+// 导入活动缓存
 import { activityCache } from "@/app/presence/sessionCache";
+// 导入事件构建器和路由器
 import { buildMachineActivityEphemeral, buildUpdateMachineUpdate, eventRouter } from "@/app/events/eventRouter";
+// 导入日志工具
 import { log } from "@/utils/log";
+// 导入数据库客户端
 import { db } from "@/storage/db";
+// 导入 Socket.IO Socket 类型
 import { Socket } from "socket.io";
+// 导入用户序列号分配器
 import { allocateUserSeq } from "@/storage/seq";
+// 导入随机密钥生成器
 import { randomKeyNaked } from "@/utils/randomKeyNaked";
 
+/**
+ * 机器更新处理器
+ * 处理机器的存活状态、元数据更新和守护进程状态更新
+ * @param userId - 用户ID
+ * @param socket - Socket.IO 连接对象
+ */
 export function machineUpdateHandler(userId: string, socket: Socket) {
+    /**
+     * 处理机器存活心跳事件
+     * 接收并验证机器的存活状态更新，更新活动缓存并发送临时事件
+     */
     socket.on('machine-alive', async (data: {
-        machineId: string;
-        time: number;
+        machineId: string;  // 机器ID
+        time: number;       // 心跳时间戳
     }) => {
         try {
             // Track metrics
@@ -50,6 +68,11 @@ export function machineUpdateHandler(userId: string, socket: Socket) {
         }
     });
 
+    /**
+     * 处理机器元数据更新事件
+     * 使用乐观并发控制（OCC）更新机器的元数据
+     * 通过版本号确保原子性操作，防止并发冲突
+     */
     // Machine metadata update with optimistic concurrency control
     socket.on('machine-update-metadata', async (data: any, callback: (response: any) => void) => {
         try {
@@ -144,6 +167,11 @@ export function machineUpdateHandler(userId: string, socket: Socket) {
         }
     });
 
+    /**
+     * 处理机器守护进程状态更新事件
+     * 使用乐观并发控制（OCC）更新机器的守护进程状态
+     * 通过版本号确保原子性操作，同时更新机器的活动状态
+     */
     // Machine daemon state update with optimistic concurrency control
     socket.on('machine-update-state', async (data: any, callback: (response: any) => void) => {
         try {

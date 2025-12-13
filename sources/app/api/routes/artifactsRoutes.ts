@@ -1,27 +1,46 @@
+// 导入事件路由器和工件更新构建函数
 import { eventRouter, buildNewArtifactUpdate, buildUpdateArtifactUpdate, buildDeleteArtifactUpdate } from "@/app/events/eventRouter";
+// 导入数据库客户端
 import { db } from "@/storage/db";
+// 导入 Fastify 类型定义
 import { Fastify } from "../types";
+// 导入 Zod 验证库
 import { z } from "zod";
+// 导入随机密钥生成工具
 import { randomKeyNaked } from "@/utils/randomKeyNaked";
+// 导入用户序列号分配工具
 import { allocateUserSeq } from "@/storage/seq";
+// 导入日志工具
 import { log } from "@/utils/log";
+// 导入隐私工具包（用于 Base64 编解码）
 import * as privacyKit from "privacy-kit";
 
+/**
+ * 工件路由定义
+ * 提供工件（Artifacts）的 CRUD 操作接口
+ * @param app - Fastify 应用实例
+ */
 export function artifactsRoutes(app: Fastify) {
-    // GET /v1/artifacts - List all artifacts for the account
+    /**
+     * GET /v1/artifacts - 获取账户的所有工件列表
+     * 返回用户的所有工件基本信息（不包含完整的 body 内容）
+     * 响应数据按更新时间倒序排列
+     */
     app.get('/v1/artifacts', {
         preHandler: app.authenticate,
         schema: {
             response: {
+                // 成功响应：工件数组
                 200: z.array(z.object({
-                    id: z.string(),
-                    header: z.string(),
-                    headerVersion: z.number(),
-                    dataEncryptionKey: z.string(),
-                    seq: z.number(),
-                    createdAt: z.number(),
-                    updatedAt: z.number()
+                    id: z.string(),                    // 工件 ID
+                    header: z.string(),                // 工件头部（Base64 编码）
+                    headerVersion: z.number(),         // 头部版本号
+                    dataEncryptionKey: z.string(),     // 数据加密密钥（Base64 编码）
+                    seq: z.number(),                   // 序列号
+                    createdAt: z.number(),             // 创建时间戳
+                    updatedAt: z.number()              // 更新时间戳
                 })),
+                // 失败响应
                 500: z.object({
                     error: z.literal('Failed to get artifacts')
                 })
@@ -60,28 +79,35 @@ export function artifactsRoutes(app: Fastify) {
         }
     });
 
-    // GET /v1/artifacts/:id - Get single artifact with full body
+    /**
+     * GET /v1/artifacts/:id - 获取单个工件的完整信息
+     * 返回指定工件的所有信息，包括完整的 body 内容
+     */
     app.get('/v1/artifacts/:id', {
         preHandler: app.authenticate,
         schema: {
+            // 请求参数定义
             params: z.object({
-                id: z.string()
+                id: z.string()  // 工件 ID
             }),
             response: {
+                // 成功响应：完整工件信息
                 200: z.object({
-                    id: z.string(),
-                    header: z.string(),
-                    headerVersion: z.number(),
-                    body: z.string(),
-                    bodyVersion: z.number(),
-                    dataEncryptionKey: z.string(),
-                    seq: z.number(),
-                    createdAt: z.number(),
-                    updatedAt: z.number()
+                    id: z.string(),                    // 工件 ID
+                    header: z.string(),                // 工件头部（Base64 编码）
+                    headerVersion: z.number(),         // 头部版本号
+                    body: z.string(),                  // 工件主体内容（Base64 编码）
+                    bodyVersion: z.number(),           // 主体版本号
+                    dataEncryptionKey: z.string(),     // 数据加密密钥（Base64 编码）
+                    seq: z.number(),                   // 序列号
+                    createdAt: z.number(),             // 创建时间戳
+                    updatedAt: z.number()              // 更新时间戳
                 }),
+                // 工件不存在
                 404: z.object({
                     error: z.literal('Artifact not found')
                 }),
+                // 服务器错误
                 500: z.object({
                     error: z.literal('Failed to get artifact')
                 })
@@ -120,31 +146,39 @@ export function artifactsRoutes(app: Fastify) {
         }
     });
 
-    // POST /v1/artifacts - Create new artifact
+    /**
+     * POST /v1/artifacts - 创建新工件
+     * 创建新的工件记录，如果工件 ID 已存在则返回现有工件（幂等操作）
+     * 创建成功后会发送 new-artifact 事件到用户的所有连接
+     */
     app.post('/v1/artifacts', {
         preHandler: app.authenticate,
         schema: {
+            // 请求体定义
             body: z.object({
-                id: z.string().uuid(),
-                header: z.string(),
-                body: z.string(),
-                dataEncryptionKey: z.string()
+                id: z.string().uuid(),              // 工件 ID（UUID 格式）
+                header: z.string(),                 // 工件头部（Base64 编码）
+                body: z.string(),                   // 工件主体内容（Base64 编码）
+                dataEncryptionKey: z.string()       // 数据加密密钥（Base64 编码）
             }),
             response: {
+                // 成功响应：创建的工件信息
                 200: z.object({
-                    id: z.string(),
-                    header: z.string(),
-                    headerVersion: z.number(),
-                    body: z.string(),
-                    bodyVersion: z.number(),
-                    dataEncryptionKey: z.string(),
-                    seq: z.number(),
-                    createdAt: z.number(),
-                    updatedAt: z.number()
+                    id: z.string(),                    // 工件 ID
+                    header: z.string(),                // 工件头部（Base64 编码）
+                    headerVersion: z.number(),         // 头部版本号
+                    body: z.string(),                  // 工件主体内容（Base64 编码）
+                    bodyVersion: z.number(),           // 主体版本号
+                    dataEncryptionKey: z.string(),     // 数据加密密钥（Base64 编码）
+                    seq: z.number(),                   // 序列号
+                    createdAt: z.number(),             // 创建时间戳
+                    updatedAt: z.number()              // 更新时间戳
                 }),
+                // ID 冲突：工件 ID 已被其他账户使用
                 409: z.object({
                     error: z.literal('Artifact with this ID already exists for another account')
                 }),
+                // 服务器错误
                 500: z.object({
                     error: z.literal('Failed to create artifact')
                 })
@@ -224,38 +258,49 @@ export function artifactsRoutes(app: Fastify) {
         }
     });
 
-    // POST /v1/artifacts/:id - Update artifact with version control
+    /**
+     * POST /v1/artifacts/:id - 更新工件（带版本控制）
+     * 使用乐观锁机制更新工件的 header 和/或 body
+     * 客户端需要提供期望的版本号，如果版本不匹配则返回当前版本
+     * 更新成功后会发送 update-artifact 事件到用户的所有连接
+     */
     app.post('/v1/artifacts/:id', {
         preHandler: app.authenticate,
         schema: {
+            // 请求参数定义
             params: z.object({
-                id: z.string()
+                id: z.string()  // 工件 ID
             }),
+            // 请求体定义
             body: z.object({
-                header: z.string().optional(),
-                expectedHeaderVersion: z.number().int().min(0).optional(),
-                body: z.string().optional(),
-                expectedBodyVersion: z.number().int().min(0).optional()
+                header: z.string().optional(),                      // 新的头部内容（Base64 编码，可选）
+                expectedHeaderVersion: z.number().int().min(0).optional(),  // 期望的头部版本号（可选）
+                body: z.string().optional(),                        // 新的主体内容（Base64 编码，可选）
+                expectedBodyVersion: z.number().int().min(0).optional()     // 期望的主体版本号（可选）
             }),
             response: {
                 200: z.union([
+                    // 成功响应：更新成功
                     z.object({
                         success: z.literal(true),
-                        headerVersion: z.number().optional(),
-                        bodyVersion: z.number().optional()
+                        headerVersion: z.number().optional(),  // 新的头部版本号
+                        bodyVersion: z.number().optional()     // 新的主体版本号
                     }),
+                    // 版本冲突响应：返回当前版本信息
                     z.object({
                         success: z.literal(false),
                         error: z.literal('version-mismatch'),
-                        currentHeaderVersion: z.number().optional(),
-                        currentBodyVersion: z.number().optional(),
-                        currentHeader: z.string().optional(),
-                        currentBody: z.string().optional()
+                        currentHeaderVersion: z.number().optional(),   // 当前头部版本号
+                        currentBodyVersion: z.number().optional(),     // 当前主体版本号
+                        currentHeader: z.string().optional(),          // 当前头部内容（Base64 编码）
+                        currentBody: z.string().optional()             // 当前主体内容（Base64 编码）
                     })
                 ]),
+                // 工件不存在
                 404: z.object({
                     error: z.literal('Artifact not found')
                 }),
+                // 服务器错误
                 500: z.object({
                     error: z.literal('Failed to update artifact')
                 })
@@ -355,20 +400,28 @@ export function artifactsRoutes(app: Fastify) {
         }
     });
 
-    // DELETE /v1/artifacts/:id - Delete artifact
+    /**
+     * DELETE /v1/artifacts/:id - 删除工件
+     * 删除指定的工件记录
+     * 删除成功后会发送 delete-artifact 事件到用户的所有连接
+     */
     app.delete('/v1/artifacts/:id', {
         preHandler: app.authenticate,
         schema: {
+            // 请求参数定义
             params: z.object({
-                id: z.string()
+                id: z.string()  // 工件 ID
             }),
             response: {
+                // 成功响应：删除成功
                 200: z.object({
                     success: z.literal(true)
                 }),
+                // 工件不存在
                 404: z.object({
                     error: z.literal('Artifact not found')
                 }),
+                // 服务器错误
                 500: z.object({
                     error: z.literal('Failed to delete artifact')
                 })

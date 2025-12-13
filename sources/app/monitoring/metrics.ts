@@ -3,6 +3,12 @@ import { db } from '@/storage/db';
 import { register } from '@/app/monitoring/metrics2';
 import { log } from '@/utils/log';
 
+/**
+ * 创建指标监控服务器
+ * 用于暴露 Prometheus 格式的应用指标和数据库性能指标
+ * 提供 /metrics 和 /health 两个端点
+ * @returns 返回配置好的 Fastify 应用实例
+ */
 export async function createMetricsServer() {
     const app = fastify({
         logger: false // Disable logging for metrics server
@@ -34,6 +40,12 @@ export async function createMetricsServer() {
     return app;
 }
 
+/**
+ * 启动指标监控服务器
+ * 根据环境变量 METRICS_ENABLED 决定是否启动服务器
+ * 服务器监听端口由 METRICS_PORT 环境变量指定，默认为 9090
+ * @throws 当服务器启动失败时抛出错误
+ */
 export async function startMetricsServer(): Promise<void> {
     const enabled = process.env.METRICS_ENABLED !== 'false';
     if (!enabled) {

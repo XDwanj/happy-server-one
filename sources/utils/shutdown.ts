@@ -3,8 +3,15 @@ import { log } from "./log";
 const shutdownHandlers = new Map<string, Array<() => Promise<void>>>();
 const shutdownController = new AbortController();
 
+// 导出关闭信号，用于检查应用程序是否正在关闭
 export const shutdownSignal = shutdownController.signal;
 
+/**
+ * 注册一个关闭时执行的回调函数
+ * @param name - 处理器名称，用于标识和分组
+ * @param callback - 关闭时执行的异步回调函数
+ * @returns 返回一个取消订阅的函数
+ */
 export function onShutdown(name: string, callback: () => Promise<void>): () => void {
     if (shutdownSignal.aborted) {
         // If already shutting down, execute immediately
@@ -30,10 +37,18 @@ export function onShutdown(name: string, callback: () => Promise<void>): () => v
     };
 }
 
+/**
+ * 检查应用程序是否正在关闭
+ * @returns 如果正在关闭返回 true，否则返回 false
+ */
 export function isShutdown() {
     return shutdownSignal.aborted;
 }
 
+/**
+ * 等待应用程序接收关闭信号（SIGINT 或 SIGTERM）并执行所有注册的关闭处理器
+ * 该函数会阻塞直到收到系统关闭信号，然后并发执行所有关闭回调
+ */
 export async function awaitShutdown() {
     await new Promise<void>((resolve) => {
         process.on('SIGINT', async () => {
@@ -79,6 +94,13 @@ export async function awaitShutdown() {
     }
 }
 
+/**
+ * 确保异步操作在关闭期间能够完成
+ * 如果在操作执行期间收到关闭信号，会等待操作完成后再继续关闭流程
+ * @param name - 操作名称，用于日志记录
+ * @param callback - 需要保持存活直到完成的异步操作
+ * @returns 返回回调函数的执行结果
+ */
 export async function keepAlive<T>(name: string, callback: () => Promise<T>): Promise<T> {
     let completed = false;
     let result: T;

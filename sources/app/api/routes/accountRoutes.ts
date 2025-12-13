@@ -8,7 +8,15 @@ import { allocateUserSeq } from "@/storage/seq";
 import { log } from "@/utils/log";
 import { AccountProfile } from "@/types";
 
+/**
+ * 账户相关的路由注册函数
+ * 包含用户个人资料、账户设置和使用统计等接口
+ */
 export function accountRoutes(app: Fastify) {
+    /**
+     * 获取用户个人资料接口
+     * 返回用户的基本信息、头像、GitHub 信息和已连接的服务
+     */
     app.get('/v1/account/profile', {
         preHandler: app.authenticate,
     }, async (request, reply) => {
@@ -36,7 +44,10 @@ export function accountRoutes(app: Fastify) {
         });
     });
 
-    // Get Account Settings API
+    /**
+     * 获取账户设置接口
+     * 返回用户的设置内容和设置版本号
+     */
     app.get('/v1/account/settings', {
         preHandler: app.authenticate,
         schema: {
@@ -70,7 +81,11 @@ export function accountRoutes(app: Fastify) {
         }
     });
 
-    // Update Account Settings API
+    /**
+     * 更新账户设置接口
+     * 使用乐观锁机制确保并发更新的安全性
+     * 如果版本号不匹配，返回当前版本和设置内容
+     */
     app.post('/v1/account/settings', {
         schema: {
             body: z.object({
@@ -176,6 +191,11 @@ export function accountRoutes(app: Fastify) {
         }
     });
 
+    /**
+     * 使用情况查询接口
+     * 根据会话、时间范围查询用户的使用统计数据
+     * 支持按小时或天进行数据聚合
+     */
     app.post('/v1/usage/query', {
         schema: {
             body: z.object({

@@ -7,8 +7,14 @@ import { randomKeyNaked } from "@/utils/randomKeyNaked";
 import { Socket } from "socket.io";
 import * as privacyKit from "privacy-kit";
 
+/**
+ * Artifact 更新处理器
+ * 处理与 artifact（工件/制品）相关的 WebSocket 事件，包括读取、更新、创建和删除操作
+ * @param userId - 用户ID
+ * @param socket - Socket.io 套接字实例
+ */
 export function artifactUpdateHandler(userId: string, socket: Socket) {
-    // Read artifact with full body
+    // artifact-read: 读取完整的 artifact 数据（包含 header 和 body）
     socket.on('artifact-read', async (data: {
         artifactId: string;
     }, callback: (response: any) => void) => {
@@ -62,7 +68,8 @@ export function artifactUpdateHandler(userId: string, socket: Socket) {
         }
     });
 
-    // Update artifact with optimistic concurrency control
+    // artifact-update: 使用乐观并发控制更新 artifact
+    // 支持分别更新 header 和 body，通过版本号进行并发控制
     socket.on('artifact-update', async (data: {
         artifactId: string;
         header?: {
@@ -253,7 +260,8 @@ export function artifactUpdateHandler(userId: string, socket: Socket) {
         }
     });
 
-    // Create new artifact
+    // artifact-create: 创建新的 artifact
+    // 操作是幂等的：如果 artifact 已存在于同一账户下，则返回现有 artifact
     socket.on('artifact-create', async (data: {
         id: string;
         header: string;
@@ -349,7 +357,8 @@ export function artifactUpdateHandler(userId: string, socket: Socket) {
         }
     });
 
-    // Delete artifact
+    // artifact-delete: 删除 artifact
+    // 仅允许删除属于当前用户的 artifact
     socket.on('artifact-delete', async (data: {
         artifactId: string;
     }, callback: (response: any) => void) => {

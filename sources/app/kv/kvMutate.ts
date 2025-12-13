@@ -5,32 +5,40 @@ import { randomKeyNaked } from "@/utils/randomKeyNaked";
 import { eventRouter, buildKVBatchUpdateUpdate } from "@/app/events/eventRouter";
 import * as privacyKit from "privacy-kit";
 
+/**
+ * KV 变更接口
+ * 用于描述单个键值对的变更操作
+ */
 export interface KVMutation {
-    key: string;
-    value: string | null; // null = delete (sets value to null but keeps record)
-    version: number; // Always required, use -1 for new keys
+    key: string; // 键名
+    value: string | null; // 值（null 表示删除，设置值为 null 但保留记录）
+    version: number; // 版本号（始终必需，新键使用 -1）
 }
 
+/**
+ * KV 变更结果接口
+ * 描述批量变更操作的执行结果
+ */
 export interface KVMutateResult {
-    success: boolean;
-    results?: Array<{
-        key: string;
-        version: number;
+    success: boolean; // 操作是否成功
+    results?: Array<{ // 成功的变更结果列表
+        key: string; // 键名
+        version: number; // 新版本号
     }>;
-    errors?: Array<{
-        key: string;
-        error: 'version-mismatch';
-        version: number;
-        value: string | null;  // Current value (null if deleted)
+    errors?: Array<{ // 失败的变更错误列表
+        key: string; // 键名
+        error: 'version-mismatch'; // 错误类型：版本不匹配
+        version: number; // 当前版本号
+        value: string | null;  // 当前值（如果已删除则为 null）
     }>;
 }
 
 /**
- * Atomically mutate multiple key-value pairs.
- * All mutations succeed or all fail.
- * Version is always required for all operations (use -1 for new keys).
- * Delete operations set value to null but keep the record with incremented version.
- * Sends a single bundled update notification for all changes.
+ * 原子性地变更多个键值对
+ * 所有变更要么全部成功，要么全部失败
+ * 所有操作都需要提供版本号（新键使用 -1）
+ * 删除操作将值设置为 null，但保留记录并递增版本号
+ * 为所有变更发送单个批量更新通知
  */
 export async function kvMutate(
     ctx: { uid: string },

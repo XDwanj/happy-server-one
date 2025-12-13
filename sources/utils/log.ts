@@ -2,14 +2,14 @@ import pino from 'pino';
 import { mkdirSync } from 'fs';
 import { join } from 'path';
 
-// Single log file name created once at startup
+// 在服务器启动时创建的单个日志文件名
 let consolidatedLogFile: string | undefined;
 
 if (process.env.DANGEROUSLY_LOG_TO_SERVER_FOR_AI_AUTO_DEBUGGING) {
     const logsDir = join(process.cwd(), '.logs');
     try {
         mkdirSync(logsDir, { recursive: true });
-        // Create filename once at startup
+        // 在启动时创建一次文件名
         const now = new Date();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
@@ -23,7 +23,7 @@ if (process.env.DANGEROUSLY_LOG_TO_SERVER_FOR_AI_AUTO_DEBUGGING) {
     }
 }
 
-// Format time as HH:MM:ss.mmm in local time
+// 将时间戳格式化为本地时间格式 HH:MM:ss.mmm
 function formatLocalTime(timestamp?: number) {
     const date = timestamp ? new Date(timestamp) : new Date();
     const hours = String(date.getHours()).padStart(2, '0');
@@ -57,7 +57,7 @@ if (process.env.DANGEROUSLY_LOG_TO_SERVER_FOR_AI_AUTO_DEBUGGING && consolidatedL
     });
 }
 
-// Main server logger with local time formatting
+// 主服务器日志记录器，带有本地时间格式化功能
 export const logger = pino({
     level: 'debug',
     transport: {
@@ -65,7 +65,7 @@ export const logger = pino({
     },
     formatters: {
         log: (object: any) => {
-            // Add localTime to every log entry
+            // 为每个日志条目添加本地时间
             return {
                 ...object,
                 localTime: formatLocalTime(typeof object.time === 'number' ? object.time : undefined),
@@ -75,7 +75,7 @@ export const logger = pino({
     timestamp: () => `,"time":${Date.now()},"localTime":"${formatLocalTime()}"`,
 });
 
-// Optional file-only logger for remote logs from CLI/mobile
+// 可选的仅文件日志记录器，用于记录来自 CLI/移动端的远程日志
 export const fileConsolidatedLogger = process.env.DANGEROUSLY_LOG_TO_SERVER_FOR_AI_AUTO_DEBUGGING && consolidatedLogFile ? 
     pino({
         level: 'debug',
@@ -90,8 +90,8 @@ export const fileConsolidatedLogger = process.env.DANGEROUSLY_LOG_TO_SERVER_FOR_
         },
         formatters: {
             log: (object: any) => {
-                // Add localTime to every log entry
-                // Note: source property already exists from CLI/mobile logs
+                // 为每个日志条目添加本地时间
+                // 注意：source 属性已经从 CLI/移动端日志中存在
                 return {
                     ...object,
                     localTime: formatLocalTime(typeof object.time === 'number' ? object.time : undefined),
@@ -101,18 +101,22 @@ export const fileConsolidatedLogger = process.env.DANGEROUSLY_LOG_TO_SERVER_FOR_
         timestamp: () => `,"time":${Date.now()},"localTime":"${formatLocalTime()}"`,
     }) : undefined;
 
+// 记录普通信息日志
 export function log(src: any, ...args: any[]) {
     logger.info(src, ...args);
 }
 
+// 记录警告日志
 export function warn(src: any, ...args: any[]) {
     logger.warn(src, ...args);
 }
 
+// 记录错误日志
 export function error(src: any, ...args: any[]) {
     logger.error(src, ...args);
 }
 
+// 记录调试日志
 export function debug(src: any, ...args: any[]) {
     logger.debug(src, ...args);
 }

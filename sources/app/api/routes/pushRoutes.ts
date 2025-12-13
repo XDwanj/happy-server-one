@@ -2,9 +2,15 @@ import { z } from "zod";
 import { type Fastify } from "../types";
 import { db } from "@/storage/db";
 
+/**
+ * 注册推送相关路由
+ * 提供推送令牌的注册、删除和查询功能
+ * @param app - Fastify 应用实例
+ */
 export function pushRoutes(app: Fastify) {
-    
-    // Push Token Registration API
+
+    // 推送令牌注册 API
+    // 注册或更新用户的推送令牌，用于接收推送通知
     app.post('/v1/push-tokens', {
         schema: {
             body: z.object({
@@ -47,7 +53,8 @@ export function pushRoutes(app: Fastify) {
         }
     });
 
-    // Delete Push Token API
+    // 删除推送令牌 API
+    // 删除指定的推送令牌，停止向该设备发送推送通知
     app.delete('/v1/push-tokens/:token', {
         schema: {
             params: z.object({
@@ -81,7 +88,8 @@ export function pushRoutes(app: Fastify) {
         }
     });
 
-    // Get Push Tokens API
+    // 获取推送令牌列表 API
+    // 查询当前用户所有已注册的推送令牌
     app.get('/v1/push-tokens', {
         preHandler: app.authenticate
     }, async (request, reply) => {

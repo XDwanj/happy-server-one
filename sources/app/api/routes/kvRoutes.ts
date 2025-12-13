@@ -6,8 +6,17 @@ import { kvBulkGet } from "@/app/kv/kvBulkGet";
 import { kvMutate } from "@/app/kv/kvMutate";
 import { log } from "@/utils/log";
 
+/**
+ * KV 存储路由配置函数
+ * 提供键值对存储的 RESTful API 接口，包括获取、列表、批量操作和原子性变更
+ * @param app - Fastify 应用实例
+ */
 export function kvRoutes(app: Fastify) {
-    // GET /v1/kv/:key - Get single value
+    /**
+     * GET /v1/kv/:key - 获取单个键值对
+     * 根据指定的 key 获取对应的值和版本号
+     * @returns 200: 成功返回键值对信息 | 404: 键不存在 | 500: 服务器错误
+     */
     app.get('/v1/kv/:key', {
         preHandler: app.authenticate,
         schema: {
@@ -46,7 +55,13 @@ export function kvRoutes(app: Fastify) {
         }
     });
 
-    // GET /v1/kv - List key-value pairs with optional prefix filter
+    /**
+     * GET /v1/kv - 列出键值对列表
+     * 支持按前缀过滤和限制返回数量，用于获取多个键值对
+     * @query prefix - 可选的键前缀过滤条件
+     * @query limit - 返回数量限制，默认100，最大1000
+     * @returns 200: 成功返回键值对数组 | 500: 服务器错误
+     */
     app.get('/v1/kv', {
         preHandler: app.authenticate,
         schema: {
@@ -80,7 +95,12 @@ export function kvRoutes(app: Fastify) {
         }
     });
 
-    // POST /v1/kv/bulk - Bulk get values
+    /**
+     * POST /v1/kv/bulk - 批量获取多个键值对
+     * 一次性获取多个指定 key 的值，提高批量读取效率
+     * @body keys - 要获取的键数组，最少1个，最多100个
+     * @returns 200: 成功返回所有找到的键值对数组 | 500: 服务器错误
+     */
     app.post('/v1/kv/bulk', {
         preHandler: app.authenticate,
         schema: {
@@ -113,7 +133,13 @@ export function kvRoutes(app: Fastify) {
         }
     });
 
-    // PUT /v1/kv - Atomic batch mutation
+    /**
+     * POST /v1/kv - 原子性批量变更操作
+     * 执行批量的创建、更新或删除操作，所有操作在一个原子事务中完成
+     * 使用乐观锁机制（版本号）确保并发安全，新键使用版本号-1
+     * @body mutations - 变更操作数组，每个包含 key、value（null表示删除）和 version
+     * @returns 200: 所有操作成功 | 409: 版本冲突 | 500: 服务器错误
+     */
     app.post('/v1/kv', {
         preHandler: app.authenticate,
         schema: {

@@ -1,15 +1,19 @@
 import { db } from "@/storage/db";
 import * as privacyKit from "privacy-kit";
 
+/**
+ * KV 获取结果类型
+ * 返回键值对数据或 null（如果键不存在）
+ */
 export type KVGetResult = {
-    key: string;
-    value: string;
-    version: number;
+    key: string;      // 键名
+    value: string;    // Base64 编码的值
+    version: number;  // 版本号
 } | null;
 
 /**
- * Get a single key-value pair for the authenticated user.
- * Returns null if the key doesn't exist or if the value is null (deleted).
+ * 获取已认证用户的单个键值对
+ * 如果键不存在或值为 null（已删除）则返回 null
  */
 export async function kvGet(
     ctx: { uid: string },
@@ -24,7 +28,7 @@ export async function kvGet(
         }
     });
 
-    // Treat missing records and null values as "not found"
+    // 将缺失的记录和 null 值视为"未找到"
     if (!result || result.value === null) {
         return null;
     }

@@ -1,26 +1,32 @@
+// 上下文类型，包含当前用户信息
 import { Context } from "@/context";
+// 数据库事务管理工具，用于确保操作的原子性和一致性
 import { inTx, afterTx } from "@/storage/inTx";
+// 事件路由器，用于向客户端发送实时更新通知
 import { eventRouter, buildDeleteSessionUpdate } from "@/app/events/eventRouter";
+// 分配用户序列号，用于更新版本控制
 import { allocateUserSeq } from "@/storage/seq";
+// 生成随机密钥的工具函数
 import { randomKeyNaked } from "@/utils/randomKeyNaked";
+// 日志记录工具
 import { log } from "@/utils/log";
 
 /**
- * Delete a session and all its related data.
- * Handles:
- * - Deleting all session messages
- * - Deleting all usage reports for the session
- * - Deleting all access keys for the session
- * - Deleting the session itself
- * - Sending socket notification to all connected clients
- * 
- * @param ctx - Context with user information
- * @param sessionId - ID of the session to delete
- * @returns true if deletion was successful, false if session not found or not owned by user
+ * 删除会话及其所有相关数据
+ * 处理内容包括：
+ * - 删除所有会话消息
+ * - 删除会话的所有使用报告
+ * - 删除会话的所有访问密钥
+ * - 删除会话本身
+ * - 向所有已连接的客户端发送 socket 通知
+ *
+ * @param ctx - 包含用户信息的上下文对象
+ * @param sessionId - 要删除的会话 ID
+ * @returns 删除成功返回 true，会话不存在或不属于该用户返回 false
  */
 export async function sessionDelete(ctx: Context, sessionId: string): Promise<boolean> {
     return await inTx(async (tx) => {
-        // Verify session exists and belongs to the user
+        // 验证会话是否存在且属于该用户
         const session = await tx.session.findFirst({
             where: {
                 id: sessionId,
@@ -37,10 +43,10 @@ export async function sessionDelete(ctx: Context, sessionId: string): Promise<bo
             return false;
         }
 
-        // Delete all related data
-        // Note: Order matters to avoid foreign key constraint violations
-        
-        // 1. Delete session messages
+        // 删除所有相关数据
+        // 注意：删除顺序很重要，以避免外键约束违规
+
+        // 1. 删除会话消息
         const deletedMessages = await tx.sessionMessage.deleteMany({
             where: { sessionId }
         });
@@ -51,7 +57,7 @@ export async function sessionDelete(ctx: Context, sessionId: string): Promise<bo
             deletedCount: deletedMessages.count
         }, `Deleted ${deletedMessages.count} session messages`);
 
-        // 2. Delete usage reports
+        // 2. 删除使用报告
         const deletedReports = await tx.usageReport.deleteMany({
             where: { sessionId }
         });
@@ -62,7 +68,7 @@ export async function sessionDelete(ctx: Context, sessionId: string): Promise<bo
             deletedCount: deletedReports.count
         }, `Deleted ${deletedReports.count} usage reports`);
 
-        // 3. Delete access keys
+        // 3. 删除访问密钥
         const deletedAccessKeys = await tx.accessKey.deleteMany({
             where: { sessionId }
         });
@@ -73,7 +79,7 @@ export async function sessionDelete(ctx: Context, sessionId: string): Promise<bo
             deletedCount: deletedAccessKeys.count
         }, `Deleted ${deletedAccessKeys.count} access keys`);
 
-        // 4. Delete the session itself
+        // 4. 删除会话本身
         await tx.session.delete({
             where: { id: sessionId }
         });
@@ -83,7 +89,7 @@ export async function sessionDelete(ctx: Context, sessionId: string): Promise<bo
             sessionId 
         }, `Session deleted successfully`);
 
-        // Send notification after transaction commits
+        // 在事务提交后发送通知
         afterTx(tx, async () => {
             const updSeq = await allocateUserSeq(ctx.uid);
             const updatePayload = buildDeleteSessionUpdate(sessionId, updSeq, randomKeyNaked(12));

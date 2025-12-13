@@ -2,9 +2,15 @@ import { eventRouter } from "@/app/events/eventRouter";
 import { log } from "@/utils/log";
 import { Socket } from "socket.io";
 
+/**
+ * RPC处理器 - 处理同一用户不同Socket之间的远程过程调用
+ * @param userId 用户ID
+ * @param socket 当前Socket连接
+ * @param rpcListeners RPC方法监听器Map，key为方法名，value为监听该方法的Socket
+ */
 export function rpcHandler(userId: string, socket: Socket, rpcListeners: Map<string, Socket>) {
-    
-    // RPC register - Register this socket as a listener for an RPC method
+
+    // RPC注册 - 将当前Socket注册为某个RPC方法的监听器
     socket.on('rpc-register', async (data: any) => {
         try {
             const { method } = data;
@@ -14,13 +20,13 @@ export function rpcHandler(userId: string, socket: Socket, rpcListeners: Map<str
                 return;
             }
 
-            // Check if method was already registered
+            // 检查方法是否已被其他Socket注册
             const previousSocket = rpcListeners.get(method);
             if (previousSocket && previousSocket !== socket) {
                 // log({ module: 'websocket-rpc' }, `RPC method ${method} re-registered: ${previousSocket.id} -> ${socket.id}`);
             }
 
-            // Register this socket as the listener for this method
+            // 将当前Socket注册为该方法的监听器
             rpcListeners.set(method, socket);
 
             socket.emit('rpc-registered', { method });
@@ -32,7 +38,7 @@ export function rpcHandler(userId: string, socket: Socket, rpcListeners: Map<str
         }
     });
 
-    // RPC unregister - Remove this socket as a listener for an RPC method
+    // RPC注销 - 移除当前Socket对某个RPC方法的监听
     socket.on('rpc-unregister', async (data: any) => {
         try {
             const { method } = data;
@@ -63,7 +69,7 @@ export function rpcHandler(userId: string, socket: Socket, rpcListeners: Map<str
         }
     });
 
-    // RPC call - Call an RPC method on another socket of the same user
+    // RPC调用 - 在同一用户的不同Socket之间调用RPC方法
     socket.on('rpc-call', async (data: any, callback: (response: any) => void) => {
         try {
             const { method, params } = data;
@@ -90,7 +96,7 @@ export function rpcHandler(userId: string, socket: Socket, rpcListeners: Map<str
                 return;
             }
 
-            // Don't allow calling your own socket
+            // 禁止调用自己的Socket（避免死循环）
             if (targetSocket === socket) {
                 // log({ module: 'websocket-rpc' }, `RPC call failed: Attempted self-call on method ${method}`);
                 if (callback) {
@@ -102,11 +108,11 @@ export function rpcHandler(userId: string, socket: Socket, rpcListeners: Map<str
                 return;
             }
 
-            // Log RPC call initiation
+            // 记录RPC调用开始时间
             const startTime = Date.now();
             // log({ module: 'websocket-rpc' }, `RPC call initiated: ${socket.id} -> ${method} (target: ${targetSocket.id})`);
 
-            // Forward the RPC request to the target socket using emitWithAck
+            // 使用emitWithAck将RPC请求转发到目标Socket
             try {
                 const response = await targetSocket.timeout(30000).emitWithAck('rpc-request', {
                     method,
@@ -116,7 +122,7 @@ export function rpcHandler(userId: string, socket: Socket, rpcListeners: Map<str
                 const duration = Date.now() - startTime;
                 // log({ module: 'websocket-rpc' }, `RPC call succeeded: ${method} (${duration}ms)`);
 
-                // Forward the response back to the caller via callback
+                // 通过回调将响应返回给调用者
                 if (callback) {
                     callback({
                         ok: true,
@@ -129,7 +135,7 @@ export function rpcHandler(userId: string, socket: Socket, rpcListeners: Map<str
                 const errorMsg = error instanceof Error ? error.message : 'RPC call failed';
                 // log({ module: 'websocket-rpc' }, `RPC call failed: ${method} - ${errorMsg} (${duration}ms)`);
 
-                // Timeout or error occurred
+                // 超时或发生错误
                 if (callback) {
                     callback({
                         ok: false,
@@ -148,8 +154,10 @@ export function rpcHandler(userId: string, socket: Socket, rpcListeners: Map<str
         }
     });
 
+    // 断开连接处理 - 清理当前Socket注册的所有RPC方法监听器
     socket.on('disconnect', () => {
 
+        // 查找所有由当前Socket注册的方法
         const methodsToRemove: string[] = [];
         for (const [method, registeredSocket] of rpcListeners.entries()) {
             if (registeredSocket === socket) {
@@ -157,6 +165,7 @@ export function rpcHandler(userId: string, socket: Socket, rpcListeners: Map<str
             }
         }
 
+        // 移除所有相关的方法监听器
         if (methodsToRemove.length > 0) {
             // log({ module: 'websocket-rpc' }, `Cleaning up RPC methods on disconnect for socket ${socket.id}: ${methodsToRemove.join(', ')}`);
             methodsToRemove.forEach(method => rpcListeners.delete(method));

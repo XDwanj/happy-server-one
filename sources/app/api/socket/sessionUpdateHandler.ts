@@ -8,7 +8,17 @@ import { log } from "@/utils/log";
 import { randomKeyNaked } from "@/utils/randomKeyNaked";
 import { Socket } from "socket.io";
 
+/**
+ * 会话更新处理器 - 处理会话相关的 WebSocket 事件
+ * @param userId 用户ID
+ * @param socket Socket.IO 连接实例
+ * @param connection 客户端连接信息
+ */
 export function sessionUpdateHandler(userId: string, socket: Socket, connection: ClientConnection) {
+    /**
+     * 处理会话元数据更新事件
+     * 使用乐观锁机制（版本号）确保并发更新的一致性
+     */
     socket.on('update-metadata', async (data: any, callback: (response: any) => void) => {
         try {
             const { sid, metadata, expectedVersion } = data;
@@ -71,6 +81,10 @@ export function sessionUpdateHandler(userId: string, socket: Socket, connection:
         }
     });
 
+    /**
+     * 处理会话代理状态更新事件
+     * 使用乐观锁机制（版本号）确保并发更新的一致性
+     */
     socket.on('update-state', async (data: any, callback: (response: any) => void) => {
         try {
             const { sid, agentState, expectedVersion } = data;
@@ -136,6 +150,10 @@ export function sessionUpdateHandler(userId: string, socket: Socket, connection:
             }
         }
     });
+    /**
+     * 处理会话活跃心跳事件
+     * 更新会话的最后活跃时间，并广播会话活动状态
+     */
     socket.on('session-alive', async (data: {
         sid: string;
         time: number;
@@ -182,7 +200,13 @@ export function sessionUpdateHandler(userId: string, socket: Socket, connection:
         }
     });
 
+    // 消息接收锁，确保同一连接的消息按顺序处理
     const receiveMessageLock = new AsyncLock();
+    /**
+     * 处理新消息接收事件
+     * 创建加密消息并广播给所有相关客户端
+     * 使用锁确保消息按顺序处理，避免并发问题
+     */
     socket.on('message', async (data: any) => {
         await receiveMessageLock.inLock(async () => {
             try {
@@ -244,6 +268,10 @@ export function sessionUpdateHandler(userId: string, socket: Socket, connection:
         });
     });
 
+    /**
+     * 处理会话结束事件
+     * 更新会话的最后活跃时间并标记为非活跃状态
+     */
     socket.on('session-end', async (data: {
         sid: string;
         time: number;

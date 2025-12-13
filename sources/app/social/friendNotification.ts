@@ -4,41 +4,42 @@ import { Context } from "@/context";
 import { afterTx } from "@/storage/inTx";
 
 /**
- * Check if a notification should be sent based on the last notification time and relationship status.
- * Returns true if:
- * - No previous notification was sent (lastNotifiedAt is null)
- * - OR 24 hours have passed since the last notification
- * - AND the relationship is not rejected
+ * 检查是否应该发送通知
+ * 基于最后通知时间和关系状态来判断是否需要发送通知
+ * 返回 true 的条件：
+ * - 从未发送过通知（lastNotifiedAt 为 null）
+ * - 或者距离上次通知已超过 24 小时
+ * - 且关系状态不是被拒绝
  */
 export function shouldSendNotification(
     lastNotifiedAt: Date | null,
     status: RelationshipStatus
 ): boolean {
-    // Don't send notifications for rejected relationships
+    // 被拒绝的关系不发送通知
     if (status === RelationshipStatus.rejected) {
         return false;
     }
 
-    // If never notified, send notification
+    // 如果从未通知过，则发送通知
     if (!lastNotifiedAt) {
         return true;
     }
 
-    // Check if 24 hours have passed since last notification
+    // 检查距离上次通知是否已超过 24 小时
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     return lastNotifiedAt < twentyFourHoursAgo;
 }
 
 /**
- * Send a friend request notification to the receiver and update lastNotifiedAt.
- * This creates a feed item for the receiver about the incoming friend request.
+ * 发送好友请求通知并更新最后通知时间
+ * 为接收者创建一条关于传入好友请求的信息流条目
  */
 export async function sendFriendRequestNotification(
     tx: Prisma.TransactionClient,
     receiverUserId: string,
     senderUserId: string
 ): Promise<void> {
-    // Check if we should send notification to receiver
+    // 检查是否应该向接收者发送通知
     const receiverRelationship = await tx.userRelationship.findUnique({
         where: {
             fromUserId_toUserId: {
@@ -55,7 +56,7 @@ export async function sendFriendRequestNotification(
         return;
     }
 
-    // Create feed notification for receiver
+    // 为接收者创建信息流通知
     const receiverCtx = Context.create(receiverUserId);
     await feedPost(
         tx,
@@ -64,10 +65,10 @@ export async function sendFriendRequestNotification(
             kind: 'friend_request',
             uid: senderUserId
         },
-        `friend_request_${senderUserId}` // repeatKey to avoid duplicates
+        `friend_request_${senderUserId}` // 重复键，避免重复发送
     );
 
-    // Update lastNotifiedAt for the receiver's relationship record
+    // 更新接收者的关系记录中的最后通知时间
     await tx.userRelationship.update({
         where: {
             fromUserId_toUserId: {
@@ -82,15 +83,15 @@ export async function sendFriendRequestNotification(
 }
 
 /**
- * Send friendship established notifications to both users and update lastNotifiedAt.
- * This creates feed items for both users about the new friendship.
+ * 发送好友关系建立的通知给两个用户并更新最后通知时间
+ * 为两个用户都创建关于新建立好友关系的信息流条目
  */
 export async function sendFriendshipEstablishedNotification(
     tx: Prisma.TransactionClient,
     user1Id: string,
     user2Id: string
 ): Promise<void> {
-    // Check and send notification to user1
+    // 检查并发送通知给用户 1
     const user1Relationship = await tx.userRelationship.findUnique({
         where: {
             fromUserId_toUserId: {
@@ -112,10 +113,10 @@ export async function sendFriendshipEstablishedNotification(
                 kind: 'friend_accepted',
                 uid: user2Id
             },
-            `friend_accepted_${user2Id}` // repeatKey to avoid duplicates
+            `friend_accepted_${user2Id}` // 重复键，避免重复发送
         );
 
-        // Update lastNotifiedAt for user1
+        // 更新用户 1 的最后通知时间
         await tx.userRelationship.update({
             where: {
                 fromUserId_toUserId: {
@@ -129,7 +130,7 @@ export async function sendFriendshipEstablishedNotification(
         });
     }
 
-    // Check and send notification to user2
+    // 检查并发送通知给用户 2
     const user2Relationship = await tx.userRelationship.findUnique({
         where: {
             fromUserId_toUserId: {
@@ -151,10 +152,10 @@ export async function sendFriendshipEstablishedNotification(
                 kind: 'friend_accepted',
                 uid: user1Id
             },
-            `friend_accepted_${user1Id}` // repeatKey to avoid duplicates
+            `friend_accepted_${user1Id}` // 重复键，避免重复发送
         );
 
-        // Update lastNotifiedAt for user2
+        // 更新用户 2 的最后通知时间
         await tx.userRelationship.update({
             where: {
                 fromUserId_toUserId: {
