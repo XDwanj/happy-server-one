@@ -20,7 +20,7 @@ export const db = new PrismaClient();
  * - busy_timeout：设置锁等待超时时间，避免立即失败
  */
 export async function initSqliteOptimizations() {
-    await db.$executeRaw`PRAGMA journal_mode = WAL;`;
-    await db.$executeRaw`PRAGMA synchronous = NORMAL;`;
-    await db.$executeRaw`PRAGMA busy_timeout = 5000;`;
+    await db.$queryRaw`PRAGMA journal_mode = WAL;`;
+    await db.$queryRaw`PRAGMA synchronous = NORMAL;`;
+    await db.$queryRaw`PRAGMA busy_timeout = 5000;`;
 }
