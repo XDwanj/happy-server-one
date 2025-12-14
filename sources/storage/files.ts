@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-// 文件存储根目录
-const FILES_ROOT = path.join(process.cwd(), 'data', 'files');
+// 文件存储根目录（可通过 FILES_ROOT 环境变量配置）
+const FILES_ROOT = process.env.FILES_ROOT || path.join(process.cwd(), 'data', 'files');
 
 // 公开访问URL前缀
 const PUBLIC_URL_PREFIX = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 3005}`;

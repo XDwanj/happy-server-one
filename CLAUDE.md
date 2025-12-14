@@ -168,6 +168,7 @@ Required:
 
 Key env vars in `.env.dev`:
 - `DATABASE_URL` - SQLite path (default: `file:./data/db.sqlite`)
+- `FILES_ROOT` - File storage root directory (default: `./data/files`)
 - `HANDY_MASTER_SECRET` - Encryption key
 - `PORT` - Server port (default: 3005)
 - `PUBLIC_URL` - Public URL prefix for file access (optional, defaults to `http://localhost:PORT`)
